@@ -51,6 +51,9 @@
 
         private boolean isMultiplayer = false;
 
+        // Minimap settings
+        private boolean isMinimapExpanded = false;
+
 
         public GamePanel(String playerName, boolean isHost, String saveFilePath) {
             this.playerName = playerName;
@@ -236,7 +239,6 @@
             }
 
 
-            // Draw minimap
             minimap.draw(g2);
 
             // Draw inventory
@@ -316,6 +318,11 @@
             if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
                 InGameMenu inGameMenu = new InGameMenu(gameWindow, this);
                 inGameMenu.setVisible(true);
+            }
+
+            // Toggle de la minimap en appuyant sur "M"
+            if (e.getKeyCode() == KeyEvent.VK_M) {
+                minimap.toggleExpanded();
             }
 
         }

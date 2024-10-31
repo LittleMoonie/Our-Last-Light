@@ -12,18 +12,24 @@ public class Minimap {
     private static final int TILE_SIZE = GameConstants.TILE_SIZE;
     private World world;
     private Player player;
-    private int width = 150;
-    private int height = 150;
+    public int width = 150;
+    public int height = 150;
     private float scale = 1;
     private BufferedImage minimapImage;
     private long lastUpdateTime = 0;
     private long updateInterval = 500; // Update every second
+
+    private boolean isExpanded  = false; // Whether the minimap is open or not
 
     public Minimap(World world, Player player) {
         this.world = world;
         this.player = player;
         minimapImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
         redrawMinimap();
+    }
+
+    public void toggleExpanded() {
+        isExpanded = !isExpanded;
     }
 
     public void update() {
@@ -67,19 +73,57 @@ public class Minimap {
 
 
     public void draw(Graphics2D g2) {
-        int minimapX = 20;
-        int minimapY = 20;
+//        int minimapX = 20;
+//        int minimapY = 20;
+//
+//        // Draw cached minimap image
+//        g2.drawImage(minimapImage, minimapX, minimapY, null);
+//
+//        // Draw player position
+//        g2.setColor(Color.RED);
+//        g2.fillRect(minimapX + width / 2, minimapY + height / 2, 5, 5);
+//
+//        // Draw border
+//        g2.setColor(Color.BLACK);
+//        g2.drawRect(minimapX, minimapY, width, height);
 
-        // Draw cached minimap image
-        g2.drawImage(minimapImage, minimapX, minimapY, null);
 
-        // Draw player position
-        g2.setColor(Color.RED);
-        g2.fillRect(minimapX + width / 2, minimapY + height / 2, 5, 5);
+        int minimapX, minimapY;
 
-        // Draw border
+        if (isExpanded) {
+            // Positionne la minimap agrandie au centre de l'écran
+            minimapX = (1920 - width * 4) / 2; // Largeur x4 pour l'agrandir
+            minimapY = (1080 - height * 4) / 2;
+
+            // Dessine l'image de la minimap agrandie
+            g2.drawImage(minimapImage, minimapX, minimapY, width * 4, height * 4, null);
+
+            // Centre le joueur sur la minimap agrandie
+            int playerCenterX = minimapX + (width * 4) / 2;
+            int playerCenterY = minimapY + (height * 4) / 2;
+
+            g2.setColor(Color.RED);
+            g2.fillRect(playerCenterX - 2, playerCenterY - 2, 5, 5);
+        } else {
+            // Positionne la minimap dans un coin pour la version réduite
+            minimapX = 20;
+            minimapY = 20;
+
+            g2.drawImage(minimapImage, minimapX, minimapY, null);
+
+            // Position du joueur au centre de la minimap réduite
+            g2.setColor(Color.RED);
+            g2.fillRect(minimapX + width / 2 - 2, minimapY + height / 2 - 2, 5, 5);
+        }
+
+        // Bordure de la minimap
         g2.setColor(Color.BLACK);
-        g2.drawRect(minimapX, minimapY, width, height);
+        if (isExpanded) {
+            g2.drawRect(minimapX, minimapY, width * 4, height * 4);
+        } else {
+            g2.drawRect(minimapX, minimapY, width, height);
+        }
+
     }
 
     private Color getColorForTile(Tile tile) {
@@ -99,4 +143,8 @@ public class Minimap {
                 return Color.BLACK;
         }
     }
+    public BufferedImage getMinimapImage() {
+        return minimapImage;
+    }
+
 }
