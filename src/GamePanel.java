@@ -1,11 +1,16 @@
 package src;
 
 import javax.imageio.ImageIO;
-import javax.swing.JPanel;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.File;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class GamePanel extends JPanel implements Runnable, KeyListener {
     // Screen settings
@@ -22,7 +27,30 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     private BufferedImage loadingIndicator;
 
-    public GamePanel() {
+    private String playerName;
+    private boolean isNewGame;
+    private String saveFilePath;
+
+    private ObjectMapper objectMapper = new ObjectMapper();
+
+    private JFrame gameWindow;
+
+    // Multiplayer fields
+    private MultiplayerServer server;
+    private MultiplayerClient client;
+    private ConcurrentHashMap<String, Player> otherPlayers = new ConcurrentHashMap<>();
+
+    private boolean isMultiplayer = false;
+
+
+    public GamePanel(String saveFilePath, boolean isNewGame) {
+        this.saveFilePath = saveFilePath;
+        this.isNewGame = isNewGame;
+        initializeGame();
+    }
+
+
+    private void initializeGame() {
         // Get screen dimensions
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         SCREEN_WIDTH = (int) screenSize.getWidth();
@@ -34,9 +62,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         this.addKeyListener(this);
         this.setFocusable(true);
 
-        world = new World();
-        player = new Player(world);
-        minimap = new Minimap(world, player);
+        if (!isNewGame && saveFilePath != null) {
+            loadGame(saveFilePath);
+        } else {
+            // Start a new game
+            long worldSeed = System.currentTimeMillis(); // Generate a seed based on current time
+            world = new World(worldSeed);
+            player = new Player(world, playerName);
+            minimap = new Minimap(world, player);
+        }
 
         try {
             loadingIndicator = ImageIO.read(getClass().getResourceAsStream("/resources/loading.png"));
@@ -49,6 +83,30 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             g.fillOval(0, 0, 50, 50);
             g.dispose();
         }
+    }
+
+    public void setServer(MultiplayerServer server) {
+        this.server = server;
+        this.isMultiplayer = true;
+    }
+
+    public void setClient(MultiplayerClient client) {
+        this.client = client;
+        this.isMultiplayer = true;
+    }
+
+    public Player getPlayer() {
+        return player;
+    }
+
+    public void updateOtherPlayer(String playerName, int x, int y) {
+        Player otherPlayer = otherPlayers.get(playerName);
+        if (otherPlayer == null) {
+            otherPlayer = new Player(null, playerName); // World is null for now
+            otherPlayers.put(playerName, otherPlayer);
+        }
+        otherPlayer.x = x;
+        otherPlayer.y = y;
     }
 
     public void startGameThread() {
@@ -86,6 +144,25 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         player.update();
         minimap.update();
         gameTime += 1;
+
+        // Send player's position to server
+        if (isMultiplayer && client != null) {
+            client.sendPlayerPosition(player);
+        }
+
+        // Multiplayer update logic
+        if (isMultiplayer) {
+            if (server != null) {
+                // Handle server-side multiplayer updates
+                // Send player position to clients
+                server.broadcastPlayerPosition(player);
+            }
+            if (client != null) {
+                // Handle client-side multiplayer updates
+                // Send player position to server
+                client.sendPlayerPosition(player);
+            }
+        }
     }
 
     protected void paintComponent(Graphics g) {
@@ -110,7 +187,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 int tileX = i * TILE_SIZE;
                 int tileY = j * TILE_SIZE;
                 // Request immediate tile generation for visible tiles
-                Tile tile = world.getTileAt(tileX, tileY);
+                Tile tile = world.getTileAt(tileX, tileY, true);
 
                 if (tile != null) {
                     int screenX = tileX - (player.x - SCREEN_WIDTH / 2);
@@ -126,6 +203,23 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 SCREEN_WIDTH / 2 - player.size / 2,
                 SCREEN_HEIGHT / 2 - player.size / 2,
                 player.size, player.size, null);
+
+        // Draw other players in multiplayer mode
+        if (isMultiplayer) {
+            if (server != null) {
+                // Draw other players connected to the server
+                for (Player otherPlayer : otherPlayers.values()) {
+                    drawOtherPlayer(g2, otherPlayer);
+                }
+            }
+            if (client != null) {
+                // Draw other players received from the server
+                for (Player otherPlayer : client.getOtherPlayers()) {
+                    drawOtherPlayer(g2, otherPlayer);
+                }
+            }
+        }
+
 
         // Draw minimap
         minimap.draw(g2);
@@ -144,11 +238,69 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         g2.dispose();
     }
 
+    private void drawOtherPlayer(Graphics2D g2, Player otherPlayer) {
+        int screenX = otherPlayer.x - player.x + SCREEN_WIDTH / 2 - otherPlayer.size / 2;
+        int screenY = otherPlayer.y - player.y + SCREEN_HEIGHT / 2 - otherPlayer.size / 2;
+        g2.drawImage(otherPlayer.getImage(), screenX, screenY, otherPlayer.size, otherPlayer.size, null);
+    }
+
+    public void saveGame(String saveFilePath) {
+        GameData gameData = new GameData();
+        gameData.playerX = player.x;
+        gameData.playerY = player.y;
+        gameData.playerName = player.name;
+        gameData.gameTime = gameTime;
+        gameData.worldSeed = world.getWorldSeed();
+        gameData.inventory = player.inventory.getItems(); // Save the inventory
+
+        try {
+            objectMapper.writeValue(new File(saveFilePath), gameData);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void loadGame(String saveFilePath) {
+        try {
+            GameData gameData = objectMapper.readValue(new File(saveFilePath), GameData.class);
+            // Initialize game state from loaded data
+            world = new World(gameData.worldSeed);
+            player = new Player(world, gameData.playerName);
+            player.x = gameData.playerX;
+            player.y = gameData.playerY;
+            gameTime = gameData.gameTime;
+            minimap = new Minimap(world, player);
+
+            // Load the inventory
+            if (gameData.inventory != null) {
+                player.inventory.setItems(gameData.inventory);
+            } else {
+                player.inventory.setItems(new HashMap<>());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setGameWindow(JFrame gameWindow) {
+        this.gameWindow = gameWindow;
+    }
+
+    public void stopGameThread() {
+        gameThread = null;
+    }
+
     // KeyListener methods
     public void keyTyped(KeyEvent e) {}
 
     public void keyPressed(KeyEvent e) {
         player.keyPressed(e);
+
+        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+            InGameMenu inGameMenu = new InGameMenu(gameWindow, this);
+            inGameMenu.setVisible(true);
+        }
+
     }
 
     public void keyReleased(KeyEvent e) {

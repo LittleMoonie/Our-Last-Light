@@ -45,7 +45,7 @@ public class Minimap {
                 int tileX = worldX + x * scale * TILE_SIZE;
                 int tileY = worldY + y * scale * TILE_SIZE;
 
-                Tile tile = world.getTileAt(tileX, tileY); // Non-blocking
+                Tile tile = world.getTileAt(tileX, tileY, true); // Non-blocking
 
                 if (tile != null && !tile.type.equals("loading")) {
                     g.setColor(getColorForTile(tile));

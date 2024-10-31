@@ -1,20 +1,31 @@
 package src;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Set;
 
 public class World {
     private TileProvider tileProvider;
+    private long worldSeed;
 
-    public World() {
-        tileProvider = new TileProvider();
+    private static final int TILE_SIZE = GameConstants.TILE_SIZE;
+
+    public World(long seed) {
+        this.worldSeed = seed;
+        tileProvider = new TileProvider(seed);
     }
 
-    public Tile getTileAt(int x, int y) {
-        return tileProvider.getTileAt(x, y, false);
+    public Tile getTileAt(int x, int y, boolean immediate) {
+        return tileProvider.getTileAt(x, y, immediate);
     }
 
     public boolean isLoadingTiles() {
         return tileProvider.isLoadingTiles();
+    }
+
+    public long getWorldSeed() {
+        return worldSeed;
     }
 
     // Implement the findLargestLandmass method
@@ -61,7 +72,7 @@ public class World {
             }
             visited.add(key);
 
-            Tile tile = getTileAt(cx * GameConstants.TILE_SIZE, cy * GameConstants.TILE_SIZE);
+            Tile tile = getTileAt(cx * TILE_SIZE, cy * TILE_SIZE, true);
 
             if (tile != null && !tile.type.equals("water") && !tile.isObstacle) {
                 landmass.add(key);

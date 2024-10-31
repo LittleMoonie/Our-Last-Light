@@ -15,14 +15,13 @@ public class TileProvider {
     // Keep track of tiles being generated
     private Set<Long> tilesBeingGenerated;
 
-    public TileProvider() {
+    public TileProvider(long seed) {
         tileMap = Collections.synchronizedMap(new LRUCache<>(MAX_CACHE_SIZE));
         noiseCache = Collections.synchronizedMap(new LRUCache<>(MAX_CACHE_SIZE));
-        noiseGenerator = new SimplexNoise(System.currentTimeMillis());
+        noiseGenerator = new SimplexNoise(seed);
         executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
         tilesBeingGenerated = ConcurrentHashMap.newKeySet();
     }
-
     public boolean isLoadingTiles() {
         return !tilesBeingGenerated.isEmpty();
     }
