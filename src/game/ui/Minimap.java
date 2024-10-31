@@ -12,12 +12,12 @@ public class Minimap {
     private static final int TILE_SIZE = GameConstants.TILE_SIZE;
     private World world;
     private Player player;
-    private int width = 250;
-    private int height = 250;
-    private int scale = 20;
+    private int width = 150;
+    private int height = 150;
+    private float scale = 1;
     private BufferedImage minimapImage;
     private long lastUpdateTime = 0;
-    private long updateInterval = 1000; // Update every second
+    private long updateInterval = 500; // Update every second
 
     public Minimap(World world, Player player) {
         this.world = world;
@@ -37,8 +37,8 @@ public class Minimap {
     private void redrawMinimap() {
         Graphics2D g = minimapImage.createGraphics();
 
-        int worldX = player.x - (width / 2) * scale * TILE_SIZE;
-        int worldY = player.y - (height / 2) * scale * TILE_SIZE;
+        int worldX = (int) (player.x - (width / 2) * scale * TILE_SIZE);
+        int worldY = (int) (player.y - (height / 2) * scale * TILE_SIZE);
 
         // Clear previous image
         g.setComposite(AlphaComposite.Clear);
@@ -47,8 +47,8 @@ public class Minimap {
 
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                int tileX = worldX + x * scale * TILE_SIZE;
-                int tileY = worldY + y * scale * TILE_SIZE;
+                int tileX = (int) (worldX + x * scale * TILE_SIZE);
+                int tileY = (int) (worldY + y * scale * TILE_SIZE);
 
                 Tile tile = world.getTileAt(tileX, tileY, true); // Non-blocking
 
@@ -67,15 +67,15 @@ public class Minimap {
 
 
     public void draw(Graphics2D g2) {
-        int minimapX = 10;
-        int minimapY = 10;
+        int minimapX = 20;
+        int minimapY = 20;
 
         // Draw cached minimap image
         g2.drawImage(minimapImage, minimapX, minimapY, null);
 
         // Draw player position
         g2.setColor(Color.RED);
-        g2.fillRect(minimapX + width / 2, minimapY + height / 2, 2, 2);
+        g2.fillRect(minimapX + width / 2, minimapY + height / 2, 5, 5);
 
         // Draw border
         g2.setColor(Color.BLACK);
