@@ -41,19 +41,25 @@ public class SinglePlayerMenu extends JFrame implements ActionListener {
         if (e.getSource() == loadGameButton) {
             String selectedWorld = worldList.getSelectedValue();
             if (selectedWorld != null) {
-                GamePanel gamePanel = new GamePanel("saves/" + selectedWorld, false);
-                gamePanel.startGameThread();
-                JFrame gameWindow = new JFrame("Game - " + selectedWorld);
-                gameWindow.setContentPane(gamePanel);
-                gameWindow.setSize(800, 600);
-                gameWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                gameWindow.setVisible(true);
-                this.dispose();
-                parentMenu.dispose();
+                String playerName = JOptionPane.showInputDialog(this, "Enter your player name:");
+                if (playerName != null && !playerName.trim().isEmpty()) {
+                    GamePanel gamePanel = new GamePanel(playerName, true, "saves/" + selectedWorld);
+                    gamePanel.startGameThread();
+
+                    JFrame gameWindow = new JFrame("Game - " + selectedWorld);
+                    gameWindow.setContentPane(gamePanel);
+                    gameWindow.setSize(800, 600);
+                    gameWindow.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                    gameWindow.setVisible(true);
+
+                    this.dispose();
+                    parentMenu.dispose();
+                }
             }
         } else if (e.getSource() == backButton) {
             parentMenu.setVisible(true);
             this.dispose();
         }
     }
+
 }

@@ -41,12 +41,7 @@ public class MultiplayerMenu extends JFrame implements ActionListener {
                 MultiplayerServer server = new MultiplayerServer();
                 server.start();
 
-                // Show IP address in a dialog
-                String localIpAddress = server.getLocalIpAddress();
-                JOptionPane.showMessageDialog(this, "LAN server hosted on IP: " + localIpAddress,
-                        "Hosting LAN Game", JOptionPane.INFORMATION_MESSAGE);
-
-                GamePanel gamePanel = new GamePanel(playerName, true);
+                GamePanel gamePanel = new GamePanel(playerName, true, "path/to/world.json"); // Host mode with world path
                 gamePanel.setServer(server);
                 JFrame gameWindow = new JFrame("Hosted Multiplayer Game");
                 gameWindow.setContentPane(gamePanel);
@@ -57,12 +52,12 @@ public class MultiplayerMenu extends JFrame implements ActionListener {
                 parentMenu.dispose();
                 gamePanel.startGameThread();
             }
-        }  else if (e.getSource() == joinGameButton) {
+        } else if (e.getSource() == joinGameButton) {
             String serverAddress = JOptionPane.showInputDialog(this, "Enter server IP address:");
             if (serverAddress != null && !serverAddress.trim().isEmpty()) {
                 String playerName = JOptionPane.showInputDialog(this, "Enter your name:");
                 if (playerName != null && !playerName.trim().isEmpty()) {
-                    GamePanel gamePanel = new GamePanel(playerName, false);
+                    GamePanel gamePanel = new GamePanel(playerName, false, null); // Client mode, no world path
                     MultiplayerClient client = new MultiplayerClient(serverAddress, gamePanel);
                     gamePanel.setClient(client);
                     JFrame gameWindow = new JFrame("Joined Multiplayer Game");

@@ -43,15 +43,14 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private boolean isMultiplayer = false;
 
 
-    public GamePanel(String saveFilePath, boolean isNewGame) {
+    public GamePanel(String playerName, boolean isHost, String saveFilePath) {
+        this.playerName = playerName;
+        this.isNewGame = isHost; // Only host initializes a new game or loads save data
         this.saveFilePath = saveFilePath;
-        this.isNewGame = isNewGame;
-        initializeGame();
+        initializeGame(isHost);
     }
 
-
-    private void initializeGame() {
-        // Get screen dimensions
+    private void initializeGame(boolean isHost) {
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
         SCREEN_WIDTH = (int) screenSize.getWidth();
         SCREEN_HEIGHT = (int) screenSize.getHeight();
@@ -62,16 +61,25 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         this.addKeyListener(this);
         this.setFocusable(true);
 
-        if (!isNewGame && saveFilePath != null) {
-            loadGame(saveFilePath);
+        if (isHost) {
+            // Host loads or initializes the world
+            if (!isNewGame && saveFilePath != null) {
+                loadGame(saveFilePath);
+            } else {
+                long worldSeed = System.currentTimeMillis();
+                world = new World(worldSeed);
+                player = new Player(world, playerName);
+                minimap = new Minimap(world, player);
+            }
         } else {
-            // Start a new game
-            long worldSeed = System.currentTimeMillis(); // Generate a seed based on current time
-            world = new World(worldSeed);
-            player = new Player(world, playerName);
-            minimap = new Minimap(world, player);
+            // Client only initializes player data without loading the world
+            player = new Player(null, playerName);  // World will be null for clients
         }
 
+        loadLoadingIndicator();
+    }
+
+    private void loadLoadingIndicator() {
         try {
             loadingIndicator = ImageIO.read(getClass().getResourceAsStream("/resources/loading.png"));
         } catch (IOException e) {
@@ -145,25 +153,17 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         minimap.update();
         gameTime += 1;
 
-        // Send player's position to server
+        // Host-specific logic
+        if (isMultiplayer && server != null) {
+            server.broadcastPlayerPosition(player.name, player.x, player.y);
+        }
+
+        // Client-specific logic
         if (isMultiplayer && client != null) {
             client.sendPlayerPosition(player);
         }
-
-        // Multiplayer update logic
-        if (isMultiplayer) {
-            if (server != null) {
-                // Handle server-side multiplayer updates
-                // Send player position to clients
-                server.broadcastPlayerPosition(player.name, player.x, player.y); // Corrected: passing name, x, y
-            }
-            if (client != null) {
-                // Handle client-side multiplayer updates
-                // Send player position to server
-                client.sendPlayerPosition(player);
-            }
-        }
     }
+
 
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
