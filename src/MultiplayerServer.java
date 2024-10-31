@@ -1,18 +1,23 @@
 package src;
 
-import java.io.*;
-import java.net.*;
-import java.util.concurrent.*;
-import java.util.*;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MultiplayerServer {
     private ServerSocket serverSocket;
     private ExecutorService executor;
-    private Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, ClientHandler> clients = new ConcurrentHashMap<>();
 
     public MultiplayerServer() {
         executor = Executors.newCachedThreadPool();
     }
+
 
     public void start() {
         try {
@@ -25,7 +30,8 @@ public class MultiplayerServer {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    handleClient(clientSocket);
+                    ClientHandler clientHandler = new ClientHandler(clientSocket, this);
+                    executor.submit(clientHandler);
                 }
             });
         } catch (IOException e) {
@@ -33,41 +39,38 @@ public class MultiplayerServer {
         }
     }
 
-    private void handleClient(Socket clientSocket) {
-        ClientHandler clientHandler = new ClientHandler(clientSocket, this);
-        executor.submit(clientHandler);
-    }
-
-    public synchronized boolean registerClient(String playerName, ClientHandler clientHandler) {
-        if (clients.containsKey(playerName)) {
-            return false; // Player name already exists
+    // Register new client
+    public boolean registerClient(String playerName, ClientHandler clientHandler) {
+        if (clients.putIfAbsent(playerName, clientHandler) == null) {
+            System.out.println("Player " + playerName + " connected.");
+            return true;
+        } else {
+            System.out.println("Name already taken: " + playerName);
+            return false;
         }
-        clients.put(playerName, clientHandler);
-        broadcastPlayerJoin(playerName);
-        return true;
     }
 
+    // Remove disconnected client
     public void removeClient(String playerName) {
         clients.remove(playerName);
-        broadcastPlayerLeave(playerName);
+        System.out.println("Player " + playerName + " disconnected.");
     }
 
     public void broadcastPlayerPosition(String playerName, int x, int y) {
-        String positionUpdate = "UPDATE_POSITION:" + playerName + "," + x + "," + y;
+        String positionMessage = "UPDATE_POSITION:" + playerName + "," + x + "," + y;
         for (ClientHandler client : clients.values()) {
-            client.sendData(positionUpdate);
+            client.sendData(positionMessage);
         }
     }
 
-    private void broadcastPlayerJoin(String playerName) {
-        for (ClientHandler client : clients.values()) {
-            client.sendData("JOIN:" + playerName);
-        }
-    }
 
-    private void broadcastPlayerLeave(String playerName) {
-        for (ClientHandler client : clients.values()) {
-            client.sendData("LEAVE:" + playerName);
+    String getLocalIpAddress() {
+        try {
+            InetAddress localAddress = InetAddress.getLocalHost();
+            return localAddress.getHostAddress();
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+            return "Unknown IP";
         }
     }
 
