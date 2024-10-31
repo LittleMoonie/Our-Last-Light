@@ -61,23 +61,23 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         this.addKeyListener(this);
         this.setFocusable(true);
 
+        // Host initializes or loads the world first, then creates the player
         if (isHost) {
-            // Host loads or initializes the world
             if (!isNewGame && saveFilePath != null) {
                 loadGame(saveFilePath);
             } else {
                 long worldSeed = System.currentTimeMillis();
-                world = new World(worldSeed);
-                player = new Player(world, playerName);
+                world = new World(worldSeed);  // Initialize world first
+                player = new Player(world, playerName);  // Create player after world is ready
                 minimap = new Minimap(world, player);
             }
         } else {
-            // Client only initializes player data without loading the world
-            player = new Player(null, playerName);  // World will be null for clients
+            player = new Player(null, playerName);  // Client mode: player with no world
         }
 
         loadLoadingIndicator();
     }
+
 
     private void loadLoadingIndicator() {
         try {
