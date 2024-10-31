@@ -12,8 +12,8 @@ public class Minimap {
     private static final int TILE_SIZE = GameConstants.TILE_SIZE;
     private World world;
     private Player player;
-    private int width = 100;
-    private int height = 100;
+    private int width = 250;
+    private int height = 250;
     private int scale = 20;
     private BufferedImage minimapImage;
     private long lastUpdateTime = 0;
