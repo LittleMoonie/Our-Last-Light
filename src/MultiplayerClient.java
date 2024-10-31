@@ -1,31 +1,42 @@
 package src;
 
+import javax.swing.*;
 import java.io.*;
 import java.net.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
 
 public class MultiplayerClient {
     private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
-    private boolean running = true;
     private GamePanel gamePanel;
+    private String playerName;
 
-    // Map to store other players
-    private Map<String, Player> otherPlayers = new ConcurrentHashMap<>();
+    // Store other players in a ConcurrentHashMap
+    private ConcurrentHashMap<String, Player> otherPlayers = new ConcurrentHashMap<>();
 
     public MultiplayerClient(String serverAddress, GamePanel gamePanel) {
         this.gamePanel = gamePanel;
+        this.playerName = gamePanel.getPlayer().name;
+
         try {
-            socket = new Socket(serverAddress, 5000); // Connect to server
+            // Establish a connection to the server
+            socket = new Socket(serverAddress, 5000);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
 
-            // Send player name to server
-            out.println(gamePanel.getPlayer().name);
+            // Send player name to the server
+            out.println(playerName);
 
-            // Start listening to server messages
+            // Check for a name error
+            String response = in.readLine();
+            if ("ERROR:NAME_TAKEN".equals(response)) {
+                JOptionPane.showMessageDialog(null, "Name already taken. Please choose a different name.");
+                socket.close();
+                return;
+            }
+
+            // Start listening for updates
             new Thread(this::listenToServer).start();
         } catch (IOException e) {
             e.printStackTrace();
@@ -35,14 +46,15 @@ public class MultiplayerClient {
     private void listenToServer() {
         try {
             String inputLine;
-            while (running && (inputLine = in.readLine()) != null) {
-                // Process input from server
-                if (inputLine.startsWith("PLAYER_UPDATE:")) {
-                    String[] parts = inputLine.substring(14).split(",");
-                    String playerName = parts[0];
+            while ((inputLine = in.readLine()) != null) {
+                if (inputLine.startsWith("UPDATE_POSITION:")) {
+                    String[] parts = inputLine.split(":")[1].split(",");
+                    String name = parts[0];
                     int x = Integer.parseInt(parts[1]);
                     int y = Integer.parseInt(parts[2]);
-                    updateOtherPlayer(playerName, x, y);
+
+                    // Update other players' positions
+                    updateOtherPlayer(name, x, y);
                 }
             }
         } catch (IOException e) {
@@ -50,29 +62,27 @@ public class MultiplayerClient {
         }
     }
 
-    public void sendPlayerPosition(Player player) {
-        String positionData = "POSITION:" + player.x + "," + player.y;
-        out.println(positionData);
-    }
-
-    // Method to get other players
-    public Iterable<Player> getOtherPlayers() {
-        return otherPlayers.values();
-    }
-
-    // Method to update other player's position
     private void updateOtherPlayer(String playerName, int x, int y) {
-        Player otherPlayer = otherPlayers.get(playerName);
-        if (otherPlayer == null) {
-            otherPlayer = new Player(null, playerName); // World is null for other players
-            otherPlayers.put(playerName, otherPlayer);
+        if (!playerName.equals(this.playerName)) {
+            Player otherPlayer = otherPlayers.get(playerName);
+            if (otherPlayer == null) {
+                otherPlayer = new Player(null, playerName); // World is null for now
+                otherPlayers.put(playerName, otherPlayer);
+            }
+            otherPlayer.x = x;
+            otherPlayer.y = y;
         }
-        otherPlayer.x = x;
-        otherPlayer.y = y;
+    }
+
+    public void sendPlayerPosition(Player player) {
+        out.println("POSITION:" + player.x + "," + player.y);
+    }
+
+    public ConcurrentHashMap<String, Player> getOtherPlayers() {
+        return otherPlayers;
     }
 
     public void disconnect() {
-        running = false;
         try {
             socket.close();
         } catch (IOException e) {

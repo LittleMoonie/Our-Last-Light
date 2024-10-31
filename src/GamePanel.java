@@ -155,7 +155,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             if (server != null) {
                 // Handle server-side multiplayer updates
                 // Send player position to clients
-                server.broadcastPlayerPosition(player);
+                server.broadcastPlayerPosition(player.name, player.x, player.y); // Corrected: passing name, x, y
             }
             if (client != null) {
                 // Handle client-side multiplayer updates
@@ -214,7 +214,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             }
             if (client != null) {
                 // Draw other players received from the server
-                for (Player otherPlayer : client.getOtherPlayers()) {
+                for (Player otherPlayer : client.getOtherPlayers().values()) { // Use client.getOtherPlayers() here
                     drawOtherPlayer(g2, otherPlayer);
                 }
             }

@@ -107,13 +107,13 @@ public class Player {
     public void keyPressed(KeyEvent e) {
         int code = e.getKeyCode();
 
-        if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
+        if (code == KeyEvent.VK_Z || code == KeyEvent.VK_UP) {
             up = true;
         }
         if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
             down = true;
         }
-        if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) {
+        if (code == KeyEvent.VK_Q || code == KeyEvent.VK_LEFT) {
             left = true;
         }
         if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
@@ -130,13 +130,13 @@ public class Player {
     public void keyReleased(KeyEvent e) {
         int code = e.getKeyCode();
 
-        if (code == KeyEvent.VK_W || code == KeyEvent.VK_UP) {
+        if (code == KeyEvent.VK_Z || code == KeyEvent.VK_UP) {
             up = false;
         }
         if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
             down = false;
         }
-        if (code == KeyEvent.VK_A || code == KeyEvent.VK_LEFT) {
+        if (code == KeyEvent.VK_Q || code == KeyEvent.VK_LEFT) {
             left = false;
         }
         if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {

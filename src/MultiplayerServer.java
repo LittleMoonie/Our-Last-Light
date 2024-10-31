@@ -2,33 +2,30 @@ package src;
 
 import java.io.*;
 import java.net.*;
-import java.util.*;
 import java.util.concurrent.*;
+import java.util.*;
 
 public class MultiplayerServer {
     private ServerSocket serverSocket;
     private ExecutorService executor;
-    private List<ClientHandler> connectedClients;
-    private List<Player> listOfOtherPlayers;
+    private Map<String, ClientHandler> clients = new ConcurrentHashMap<>();
 
     public MultiplayerServer() {
         executor = Executors.newCachedThreadPool();
-        connectedClients = Collections.synchronizedList(new ArrayList<>());
-        listOfOtherPlayers = Collections.synchronizedList(new ArrayList<>());
     }
 
     public void start() {
         try {
-            serverSocket = new ServerSocket(5000); // Use port 5000
+            serverSocket = new ServerSocket(5000);
             executor.submit(() -> {
                 while (!serverSocket.isClosed()) {
+                    Socket clientSocket = null;
                     try {
-                        Socket clientSocket = serverSocket.accept();
-                        // Handle client connection
-                        handleClient(clientSocket);
+                        clientSocket = serverSocket.accept();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        throw new RuntimeException(e);
                     }
+                    handleClient(clientSocket);
                 }
             });
         } catch (IOException e) {
@@ -38,40 +35,39 @@ public class MultiplayerServer {
 
     private void handleClient(Socket clientSocket) {
         ClientHandler clientHandler = new ClientHandler(clientSocket, this);
-        connectedClients.add(clientHandler);
         executor.submit(clientHandler);
     }
 
-    public void broadcastPlayerPosition(Player player) {
-        // Serialize player position and send to all connected clients except the sender
-        String positionData = "PLAYER_UPDATE:" + player.name + "," + player.x + "," + player.y;
-        synchronized (connectedClients) {
-            for (ClientHandler clientHandler : connectedClients) {
-                if (clientHandler.getPlayer() != player) {
-                    clientHandler.sendData(positionData);
-                }
-            }
+    public synchronized boolean registerClient(String playerName, ClientHandler clientHandler) {
+        if (clients.containsKey(playerName)) {
+            return false; // Player name already exists
+        }
+        clients.put(playerName, clientHandler);
+        broadcastPlayerJoin(playerName);
+        return true;
+    }
+
+    public void removeClient(String playerName) {
+        clients.remove(playerName);
+        broadcastPlayerLeave(playerName);
+    }
+
+    public void broadcastPlayerPosition(String playerName, int x, int y) {
+        String positionUpdate = "UPDATE_POSITION:" + playerName + "," + x + "," + y;
+        for (ClientHandler client : clients.values()) {
+            client.sendData(positionUpdate);
         }
     }
 
-    public List<Player> getConnectedPlayers() {
-        synchronized (listOfOtherPlayers) {
-            return new ArrayList<>(listOfOtherPlayers);
+    private void broadcastPlayerJoin(String playerName) {
+        for (ClientHandler client : clients.values()) {
+            client.sendData("JOIN:" + playerName);
         }
     }
 
-    public void addPlayer(Player player) {
-        synchronized (listOfOtherPlayers) {
-            listOfOtherPlayers.add(player);
-        }
-    }
-
-    public void removeClient(ClientHandler clientHandler) {
-        connectedClients.remove(clientHandler);
-        if (clientHandler.getPlayer() != null) {
-            synchronized (listOfOtherPlayers) {
-                listOfOtherPlayers.remove(clientHandler.getPlayer());
-            }
+    private void broadcastPlayerLeave(String playerName) {
+        for (ClientHandler client : clients.values()) {
+            client.sendData("LEAVE:" + playerName);
         }
     }
 
