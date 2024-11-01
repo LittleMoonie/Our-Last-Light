@@ -6,23 +6,20 @@ import javax.swing.*;
 import java.awt.*;
 
 public class GameWindow extends JFrame {
-    private GraphicsDevice graphicsDevice;
 
     public GameWindow(GamePanel gamePanel) {
-        setTitle("Procedural World Game");
+        setTitle("Don't Starve Alone");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setUndecorated(true); // Full-screen
 
-        // Setup full-screen
-        graphicsDevice = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
-        setUndecorated(true); // Remove window borders for true full-screen
+        // Get the screen device
+        GraphicsDevice graphicsDevice = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
 
         // Ensure the device supports full-screen
         if (graphicsDevice.isFullScreenSupported()) {
             graphicsDevice.setFullScreenWindow(this);
-            DisplayMode displayMode = graphicsDevice.getDisplayMode();
             setContentPane(gamePanel);
-            pack();
-            setDisplayMode(displayMode);
+            setVisible(true);
         } else {
             System.out.println("Full-screen mode not supported.");
             setSize(800, 600);
@@ -30,16 +27,12 @@ public class GameWindow extends JFrame {
             setVisible(true);
         }
 
-        gamePanel.setGameWindow(this);
-    }
-
-    private void setDisplayMode(DisplayMode displayMode) {
-        if (displayMode != null) {
-            graphicsDevice.setDisplayMode(displayMode);
-        }
+        gamePanel.setGameWindow(this); // Pass GameWindow to GamePanel
     }
 
     public void close() {
-        graphicsDevice.setFullScreenWindow(null); // Exit full-screen mode
+        GraphicsDevice graphicsDevice = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+        graphicsDevice.setFullScreenWindow(null);
+        dispose();
     }
 }

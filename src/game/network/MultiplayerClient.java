@@ -6,6 +6,8 @@ import src.main.GamePanel;
 import javax.swing.*;
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MultiplayerClient {
@@ -15,7 +17,6 @@ public class MultiplayerClient {
     private GamePanel gamePanel;
     private String playerName;
 
-    // Store other players in a ConcurrentHashMap
     private ConcurrentHashMap<String, Player> otherPlayers = new ConcurrentHashMap<>();
 
     public MultiplayerClient(String serverAddress, GamePanel gamePanel) {
@@ -23,15 +24,12 @@ public class MultiplayerClient {
         this.playerName = gamePanel.getPlayer().name;
 
         try {
-            // Establish a connection to the server
             socket = new Socket(serverAddress, 5000);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
 
-            // Send player name to the server
             out.println(playerName);
 
-            // Check for a name error
             String response = in.readLine();
             if ("ERROR:NAME_TAKEN".equals(response)) {
                 JOptionPane.showMessageDialog(null, "Name already taken. Please choose a different name.");
@@ -39,7 +37,6 @@ public class MultiplayerClient {
                 return;
             }
 
-            // Start listening for updates
             new Thread(this::listenToServer).start();
         } catch (IOException e) {
             e.printStackTrace();
@@ -55,8 +52,6 @@ public class MultiplayerClient {
                     String name = parts[0];
                     int x = Integer.parseInt(parts[1]);
                     int y = Integer.parseInt(parts[2]);
-
-                    // Update other players' positions
                     updateOtherPlayer(name, x, y);
                 }
             }
@@ -69,7 +64,7 @@ public class MultiplayerClient {
         if (!playerName.equals(this.playerName)) {
             Player otherPlayer = otherPlayers.get(playerName);
             if (otherPlayer == null) {
-                otherPlayer = new Player(null, playerName); // World is null for now
+                otherPlayer = new Player(null, playerName);
                 otherPlayers.put(playerName, otherPlayer);
             }
             otherPlayer.x = x;
@@ -91,5 +86,32 @@ public class MultiplayerClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    // Method to discover LAN servers using UDP broadcast
+    public static List<String> discoverLANServers() {
+        List<String> availableServers = new ArrayList<>();
+        try (DatagramSocket socket = new DatagramSocket()) {
+            socket.setBroadcast(true);
+            byte[] requestData = "DISCOVER_SERVER".getBytes();
+            DatagramPacket requestPacket = new DatagramPacket(requestData, requestData.length, InetAddress.getByName("255.255.255.255"), 5001);
+            socket.send(requestPacket);
+
+            socket.setSoTimeout(2000); // Wait for responses within 2 seconds
+            byte[] buffer = new byte[256];
+            while (true) {
+                try {
+                    DatagramPacket responsePacket = new DatagramPacket(buffer, buffer.length);
+                    socket.receive(responsePacket);
+                    String serverResponse = new String(responsePacket.getData(), 0, responsePacket.getLength());
+                    availableServers.add(responsePacket.getAddress().getHostAddress() + " - " + serverResponse);
+                } catch (SocketTimeoutException e) {
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return availableServers;
     }
 }

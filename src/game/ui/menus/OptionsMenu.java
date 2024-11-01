@@ -1,56 +1,26 @@
 package src.game.ui.menus;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class OptionsMenu extends JFrame implements ActionListener {
-    private JFrame parentFrame;
+public class OptionsMenu extends JPanel implements ActionListener {
     private JButton backButton;
-    private JSlider volumeSlider; // Example for options
-    private JCheckBox fullscreenCheck; // Example for options
+    private MainMenu parentMenu;
 
-    public OptionsMenu(JFrame parentFrame) {
-        this.parentFrame = parentFrame;
-        setTitle("Options");
-        setSize(400, 300);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setLocationRelativeTo(null);
+    public OptionsMenu(MainMenu parent) {
+        this.parentMenu = parent;
 
-        // Components
-        backButton = createMenuButton("Back");
-        volumeSlider = new JSlider(JSlider.HORIZONTAL, 0, 100, 50);
-        fullscreenCheck = new JCheckBox("Fullscreen");
+        backButton = new JButton("Back");
+        backButton.addActionListener(this);
 
-        // Panel setup
-        JPanel panel = new JPanel();
-        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-        panel.add(new JLabel("Options"));
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(fullscreenCheck);
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(new JLabel("Volume"));
-        panel.add(volumeSlider);
-        panel.add(Box.createVerticalStrut(10));
-        panel.add(backButton);
-
-        add(panel);
-    }
-
-    private JButton createMenuButton(String text) {
-        JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(200, 40));
-        button.setAlignmentX(Component.CENTER_ALIGNMENT);
-        button.addActionListener(this);
-        return button;
+        setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+        add(backButton);
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        if (e.getSource() == backButton) {
-            parentFrame.setVisible(true);
-            this.dispose();
-        }
+        // Use the parent menu method to switch back to the main menu
+        parentMenu.showMainMenu();
     }
 }
