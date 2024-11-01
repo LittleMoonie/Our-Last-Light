@@ -35,7 +35,8 @@ public class SinglePlayerMenu extends JPanel implements ActionListener {
         File saveDir = new File(Config.SAVE_DIRECTORY);
         if (!saveDir.exists()) saveDir.mkdir();
 
-        String[] savedWorlds = saveDir.list((dir, name) -> name.endsWith(".json"));
+        // List world directories instead of individual files
+        String[] savedWorlds = saveDir.list((dir, name) -> new File(dir, name).isDirectory());
         if (savedWorlds == null) savedWorlds = new String[]{};
 
         worldList = new JList<>(savedWorlds);
@@ -77,14 +78,10 @@ public class SinglePlayerMenu extends JPanel implements ActionListener {
         if (selectedWorld != null) {
             String playerName = JOptionPane.showInputDialog(this, Config.ENTER_PLAYER_NAME_PROMPT);
             if (playerName != null && !playerName.trim().isEmpty()) {
-                GamePanel gamePanel = new GamePanel(playerName, true, Config.SAVE_DIRECTORY + selectedWorld, this.parentMenu);
+                String worldPath = Config.SAVE_DIRECTORY + selectedWorld;
+                GamePanel gamePanel = new GamePanel(playerName, true, worldPath, selectedWorld, this.parentMenu);
 
-                // Set GamePanel as the content pane and start the game
-                JFrame mainFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
-                mainFrame.setContentPane(gamePanel);
-                mainFrame.revalidate();
-                mainFrame.repaint();
-                gamePanel.startGameThread();
+                parentMenu.launchGamePanel(gamePanel, selectedWorld); // New call with world name
             }
         } else {
             JOptionPane.showMessageDialog(this, "Please select a world to load.");
@@ -94,32 +91,23 @@ public class SinglePlayerMenu extends JPanel implements ActionListener {
     private void createNewWorld() {
         String worldName = JOptionPane.showInputDialog(this, Config.ENTER_WORLD_NAME_PROMPT);
         if (worldName != null && !worldName.trim().isEmpty()) {
-            String filePath = Config.SAVE_DIRECTORY + worldName + ".json";
-            File newWorldFile = new File(filePath);
+            String worldPath = Config.SAVE_DIRECTORY + worldName;
+            File worldDir = new File(worldPath);
 
-            if (newWorldFile.exists()) {
+            if (worldDir.exists()) {
                 JOptionPane.showMessageDialog(this, Config.WORLD_EXISTS_MESSAGE);
                 return;
             }
 
-            try {
-                if (newWorldFile.createNewFile()) {
-                    GamePanel gamePanel = new GamePanel(worldName, true, filePath, this.parentMenu);
+            if (worldDir.mkdir()) {
+                String playerName = JOptionPane.showInputDialog(this, Config.ENTER_PLAYER_NAME_PROMPT);
+                if (playerName != null && !playerName.trim().isEmpty()) {
+                    GamePanel gamePanel = new GamePanel(playerName, true, worldPath, worldName, this.parentMenu);
 
-                    // Set GamePanel as the content pane and start the game
-                    JFrame mainFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
-                    mainFrame.setContentPane(gamePanel);
-                    mainFrame.revalidate();
-                    mainFrame.repaint();
-                    gamePanel.startGameThread();
-
-                    gamePanel.saveGame(filePath);
-                } else {
-                    JOptionPane.showMessageDialog(this, "Failed to create the world file.");
+                    parentMenu.launchGamePanel(gamePanel, worldName); // New call with world name
                 }
-            } catch (IOException ex) {
-                ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, Config.CREATE_WORLD_ERROR_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to create the world folder.");
             }
         }
     }

@@ -12,7 +12,7 @@ import java.io.IOException;
 public class Player {
     public int x, y; // Pixel coordinates
     public String name;
-    public static final int SIZE = Config.PLAYER_SIZE ;
+    public static final int SIZE = Config.PLAYER_SIZE;
     public int normalSpeed = 4;
     public int sprintSpeed = 8;
     public boolean up, down, left, right, sprint;
@@ -40,7 +40,7 @@ public class Player {
         int attempt = 0;
         int centerX = 0;
         int centerY = 0;
-        int radius = 100;
+        int radius = 1000;  // You might want to change this radius for testing
 
         while (attempt < maxAttempts) {
             int offsetX = (int) (Math.random() * radius * 2) - radius;
@@ -48,41 +48,38 @@ public class Player {
             int tileX = centerX + offsetX;
             int tileY = centerY + offsetY;
 
-            int worldX = tileX * TILE_SIZE;
-            int worldY = tileY * TILE_SIZE;
-
-            Tile tile = world.getTileAt(worldX, worldY, true);
+            Tile tile = world.getTileAt(tileX * TILE_SIZE, tileY * TILE_SIZE, true);
 
             if (tile != null && !tile.type.equals("water") && !tile.isObstacle) {
-                x = worldX + TILE_SIZE / 2;
-                y = worldY + TILE_SIZE / 2;
-                break;
+                x = tileX * TILE_SIZE + TILE_SIZE / 2;  // Centering on tile
+                y = tileY * TILE_SIZE + TILE_SIZE / 2;  // Centering on tile
+                return;  // Successfully found a spawn location
             }
             attempt++;
         }
-
-        if (attempt == maxAttempts) {
-            System.err.println("Failed to find a valid spawn location.");
-        }
+        System.err.println("Failed to find a valid spawn location.");
     }
+
+
     public void update() {
         int currentSpeed = sprint ? sprintSpeed : normalSpeed;
 
         // Calculate movement delta based on key states
-        int dx = 0, dy = 0;
+        double dx = 0, dy = 0;
         if (up) dy -= currentSpeed;
         if (down) dy += currentSpeed;
         if (left) dx -= currentSpeed;
         if (right) dx += currentSpeed;
 
         // Normalize movement to prevent diagonal speed boost
-        if (dx != 0 && dy != 0) {
-            dx = dx / (int) Math.sqrt(2);
-            dy = dy / (int) Math.sqrt(2);
+        double length = Math.sqrt(dx * dx + dy * dy);
+        if (length != 0) {
+            dx = dx / length * currentSpeed;
+            dy = dy / length * currentSpeed;
         }
 
-        int newX = x + dx;
-        int newY = y + dy;
+        int newX = x + (int) dx;
+        int newY = y + (int) dy;
 
         // Only update position if the player can move to the new position
         if (canMoveTo(newX, newY)) {
@@ -101,39 +98,60 @@ public class Player {
         int tileX = x / TILE_SIZE;
         int tileY = y / TILE_SIZE;
         Tile tile = world.getTileAt(tileX * TILE_SIZE, tileY * TILE_SIZE, true);
-        return tile != null && !tile.type.equals("water") && !tile.isObstacle;
+        return tile != null && !tile.type.equals("water") && !tile.isObstacle;  // Check for obstacles properly
     }
 
     public boolean collecting = false;
 
     public void keyPressed(KeyEvent e) {
-        int code = e.getKeyCode();
-
-        if (code == KeyEvent.VK_Z || code == KeyEvent.VK_UP) up = true;
-        if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) down = true;
-        if (code == KeyEvent.VK_Q || code == KeyEvent.VK_LEFT) left = true;
-        if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) right = true;
-        if (code == KeyEvent.VK_SHIFT) sprint = true;
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_Z, KeyEvent.VK_UP -> up = true;
+            case KeyEvent.VK_S, KeyEvent.VK_DOWN -> down = true;
+            case KeyEvent.VK_Q, KeyEvent.VK_LEFT -> left = true;
+            case KeyEvent.VK_D, KeyEvent.VK_RIGHT -> right = true;
+            case KeyEvent.VK_SHIFT -> sprint = true;
+        }
     }
 
     public void keyReleased(KeyEvent e) {
-        int code = e.getKeyCode();
-
-        if (code == KeyEvent.VK_Z || code == KeyEvent.VK_UP) up = false;
-        if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) down = false;
-        if (code == KeyEvent.VK_Q || code == KeyEvent.VK_LEFT) left = false;
-        if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) right = false;
-        if (code == KeyEvent.VK_SHIFT) sprint = false;
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_Z, KeyEvent.VK_UP -> up = false;
+            case KeyEvent.VK_S, KeyEvent.VK_DOWN -> down = false;
+            case KeyEvent.VK_Q, KeyEvent.VK_LEFT -> left = false;
+            case KeyEvent.VK_D, KeyEvent.VK_RIGHT -> right = false;
+            case KeyEvent.VK_SHIFT -> sprint = false;
+        }
     }
+
     public BufferedImage getImage() {
         return image;
     }
 
     public void collectResource() {
-        Tile currentTile = world.getTileAt(x, y, true);
-        if (currentTile.type.equals("forest")) {
-            inventory.addItem("Wood", 1);
-            currentTile.setType("grass");
+        // Determine the direction the player is facing and calculate the tile coordinates
+        int tileX = x / TILE_SIZE;
+        int tileY = y / TILE_SIZE;
+
+        // Adjust tile coordinates based on the direction the player is facing
+        if (up) {
+            tileY -= 1; // Collect from the tile above
+        } else if (down) {
+            tileY += 1; // Collect from the tile below
+        } else if (left) {
+            tileX -= 1; // Collect from the tile to the left
+        } else if (right) {
+            tileX += 1; // Collect from the tile to the right
+        }
+
+        Tile currentTile = world.getTileAt(tileX * TILE_SIZE, tileY * TILE_SIZE, true);
+
+        if (currentTile != null && currentTile.hasResource()) {
+            if ("tree".equals(currentTile.resource)) {
+                inventory.addItem("Wood", 1);
+            } else if ("stone".equals(currentTile.resource)) {
+                inventory.addItem("Stone", 1);
+            }
+            currentTile.removeResource(); // Remove resource after collecting
         }
     }
 }

@@ -17,12 +17,15 @@ public class MultiplayerClient {
     private PrintWriter out;
     private GamePanel gamePanel;
     private String playerName;
+    private String worldName;
 
     private ConcurrentHashMap<String, Player> otherPlayers = new ConcurrentHashMap<>();
 
     public MultiplayerClient(String serverAddress, GamePanel gamePanel) {
         this.gamePanel = gamePanel;
         this.playerName = gamePanel.getPlayer().name;
+        this.worldName = requestWorldNameFromServer(serverAddress);
+        gamePanel.setWorldName(this.worldName);
 
         try {
             socket = new Socket(serverAddress, Config.SERVER_PORT);
@@ -42,6 +45,27 @@ public class MultiplayerClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private String requestWorldNameFromServer(String serverAddress) {
+        String receivedWorldName = null;
+
+        try (Socket socket = new Socket(serverAddress, Config.SERVER_PORT);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            // Read the world name from the server
+            receivedWorldName = in.readLine(); // Read the first line which is the world name
+            System.out.println("Received world name from server: " + receivedWorldName);
+
+        } catch (IOException e) {
+            System.err.println("Error connecting to server: " + e.getMessage());
+        }
+
+        return receivedWorldName != null ? receivedWorldName : "UnknownWorld";
+    }
+
+    public String getWorldName() {
+        return worldName;
     }
 
     private void listenToServer() {

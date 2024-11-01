@@ -39,10 +39,15 @@ public class Config {
     public static final int PLAYER_SIZE = 28;
     public static final double SIMPLEX_NOISE_SCALE_BASE = 0.005;
     public static final double SIMPLEX_NOISE_SCALE_DETAIL = 0.05;
+    public static final double NOISE_THRESHOLD_MOUNTAIN = 0.8;
     public static final double NOISE_THRESHOLD_GRASS = 0.3;
     public static final double NOISE_THRESHOLD_FOREST = 0.1;
     public static final double NOISE_THRESHOLD_SAND = -0.05;
+    public static final double OBSTACLE_PROBABILITY_MOUNTAIN = 0.5;
     public static final double OBSTACLE_PROBABILITY_FOREST = 0.1;
+    public static final double OBSTACLE_PROBABILITY_SAND = 0.1;
+    public static final int TREE_REGROWTH_CHANCE = 600;  // 10 minutes in seconds/ticks
+    public static final int STONE_REGROWTH_CHANCE = 1800; // 30 minutes in seconds/ticks
     public static final int SERVER_PORT = 5000;
     public static final int DISCOVERY_PORT = 5001;
 }

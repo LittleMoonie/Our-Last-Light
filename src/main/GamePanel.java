@@ -9,9 +9,7 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.sun.tools.javac.Main;
 import src.game.constants.Config;
-import src.game.constants.GameConstants;
 import src.game.data.GameData;
 import src.game.data.SaveHandler;
 import src.game.entities.Player;
@@ -19,7 +17,6 @@ import src.game.network.MultiplayerClient;
 import src.game.network.MultiplayerServer;
 import src.game.ui.GameWindow;
 import src.game.ui.Minimap;
-import src.game.ui.menus.InGameMenu;
 import src.game.ui.menus.MainMenu;
 import src.game.world.World;
 
@@ -32,6 +29,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private Thread gameThread;
     private Player player;
     private World world;
+    private String worldName;
     private Minimap minimap;
     private BufferedImage loadingIndicator;
 
@@ -46,12 +44,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private boolean isMultiplayer = false;
     private final MainMenu mainMenu;
 
-    public GamePanel(String playerName, boolean isHost, String saveFilePath, MainMenu mainMenu) {
+    public GamePanel(String playerName, boolean isHost, String saveFilePath, String worldName, MainMenu mainMenu) {
         this.playerName = playerName;
         this.isNewGame = isHost;
         this.saveFilePath = saveFilePath;
         this.mainMenu = mainMenu;
+        this.worldName = worldName;
         initializeGame(isHost);
+        setFocusable(true);
+        requestFocusInWindow();
     }
 
     private void initializeGame(boolean isHost) {
@@ -68,13 +69,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
             if (!isNewGame && saveFilePath != null) {
                 SaveHandler.loadGame(this, saveFilePath);
             } else {
-                world = new World(System.currentTimeMillis());
+                // Use worldName when creating a new World instance
+                world = new World(System.currentTimeMillis(), worldName);
                 player = new Player(world, playerName);
                 minimap = new Minimap(world, player);
+
+                // Save initial world state
+                world.saveWorldData();
             }
         } else {
             player = new Player(null, playerName);
         }
+
         loadLoadingIndicator();
     }
 
@@ -101,20 +107,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void initializeFromData(GameData gameData) {
-        // Initialize the player’s position and name from the loaded data
         player = new Player(world, gameData.playerName);
         player.x = gameData.playerX;
         player.y = gameData.playerY;
 
-        // Set other attributes like gameTime and world
         gameTime = gameData.gameTime;
-        world = new World(gameData.worldSeed);
+        world = new World(gameData.worldSeed, worldName);
         player.inventory.setItems(gameData.inventory);
 
-        // Initialize other components as needed, e.g., minimap
         minimap = new Minimap(world, player);
     }
-
 
     public Player getPlayer() {
         return player;
@@ -126,7 +128,7 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     public void showInGameMenu() {
-        mainMenu.showInGameMenu(this);  // Call showInGameMenu on MainMenu
+        mainMenu.showInGameMenu(this);
     }
 
     @Override
@@ -147,6 +149,9 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 delta--;
             }
 
+            // Update world periodically to check for regrowth
+            world.updateWorld();
+
             try {
                 Thread.sleep(2);
             } catch (InterruptedException e) {
@@ -155,10 +160,16 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
     }
 
+
     private void update() {
         player.update();
         minimap.update();
         gameTime += 1;
+
+        if (player.collecting) {
+            player.collectResource();
+            player.collecting = false;
+        }
 
         if (isMultiplayer && server != null) {
             server.broadcastPlayerPosition(player.name, player.x, player.y);
@@ -178,23 +189,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-            showInGameMenu();
+        switch (e.getKeyCode()) {
+            case KeyEvent.VK_ESCAPE -> showInGameMenu();
+            case KeyEvent.VK_M -> minimap.toggleExpanded();
+            case KeyEvent.VK_E -> player.collecting = true;
+            default -> player.keyPressed(e);
         }
-        if (e.getKeyCode() == KeyEvent.VK_M) {
-            minimap.toggleExpanded();
-        }
-        if (e.getKeyCode() == KeyEvent.VK_E) {
-            player.collecting = true; // Activate collecting when pressing 'E'
-        }
-        player.keyPressed(e);
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         player.keyReleased(e);
     }
-
 
     public long getGameTime() {
         return gameTime;
@@ -208,6 +214,10 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         return world != null ? "World_" + world.getWorldSeed() : "UnnamedWorld";
     }
 
+    public void setWorldName(String worldName) {
+        this.worldName = worldName;
+    }
+
     public void saveGame(String filePath) {
         SaveHandler.saveGame(this, filePath);
     }
@@ -215,28 +225,25 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-
         Graphics2D g2 = (Graphics2D) g;
 
         if (world != null && player != null) {
-            // Center the camera on the player
-            int cameraX = player.x - SCREEN_WIDTH / 2;
-            int cameraY = player.y - SCREEN_HEIGHT / 2;
+            int cameraX = Math.max(0, player.x - SCREEN_WIDTH / 2);
+            int cameraY = Math.max(0, player.y - SCREEN_HEIGHT / 2);
 
-            // Render the world centered around the player
             world.render(g2, cameraX, cameraY, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-            // Render the player at the center of the screen using PLAYER_SIZE constant
-            g2.drawImage(player.getImage(), SCREEN_WIDTH / 2 - Config.PLAYER_SIZE / 2, SCREEN_HEIGHT / 2 - Config.PLAYER_SIZE / 2, Config.PLAYER_SIZE, Config.PLAYER_SIZE, null);
+            g2.drawImage(player.getImage(),
+                    SCREEN_WIDTH / 2 - Config.PLAYER_SIZE / 2,
+                    SCREEN_HEIGHT / 2 - Config.PLAYER_SIZE / 2,
+                    Config.PLAYER_SIZE, Config.PLAYER_SIZE, null);
 
-            // Draw minimap on the right side
             if (minimap != null) {
                 minimap.draw(g2);
             }
 
-            // Draw inventory on the left side
             if (player.inventory != null) {
-                player.inventory.draw(g2, 20);
+                player.inventory.draw(g2, SCREEN_WIDTH, SCREEN_HEIGHT);
             }
         } else {
             g.drawString("Loading...", getWidth() / 2, getHeight() / 2);

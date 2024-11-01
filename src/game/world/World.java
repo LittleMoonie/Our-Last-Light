@@ -1,87 +1,65 @@
+// World.java
 package src.game.world;
 
 import src.game.constants.Config;
-
 import java.awt.*;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.io.File;
+import java.io.IOException;
 import java.util.Set;
 
 public class World {
     private TileProvider tileProvider;
     private long worldSeed;
+    private String worldName;  // Add worldName attribute
 
-    public World(long seed) {
+    public World(long seed, String worldName) {
         this.worldSeed = seed;
+        this.worldName = worldName;
         tileProvider = new TileProvider(seed);
-    }
 
-    public Tile getTileAt(int x, int y, boolean immediate) {
-        return tileProvider.getTileAt(x, y, immediate);
-    }
-
-    public boolean isLoadingTiles() {
-        return tileProvider.isLoadingTiles();
+        // Attempt to load existing world data if available
+        loadWorldData(getWorldSaveFolderPath());
     }
 
     public long getWorldSeed() {
         return worldSeed;
     }
 
-    public Set<Long> findLargestLandmass(int centerX, int centerY, int radius) {
-        Set<Long> visited = new HashSet<>();
-        Set<Long> largestLandmass = new HashSet<>();
-
-        int startX = centerX - radius;
-        int endX = centerX + radius;
-        int startY = centerY - radius;
-        int endY = centerY + radius;
-
-        for (int x = startX; x <= endX; x++) {
-            for (int y = startY; y <= endY; y++) {
-                long key = generateKey(x, y);
-
-                if (!visited.contains(key)) {
-                    Set<Long> currentLandmass = new HashSet<>();
-                    exploreLandmass(x, y, visited, currentLandmass);
-
-                    if (currentLandmass.size() > largestLandmass.size()) {
-                        largestLandmass = currentLandmass;
-                    }
-                }
-            }
-        }
-
-        return largestLandmass;
+    public String getWorldName() {
+        return worldName;
     }
 
-    private void exploreLandmass(int x, int y, Set<Long> visited, Set<Long> landmass) {
-        Queue<int[]> queue = new LinkedList<>();
-        queue.offer(new int[]{x, y});
+    public TileProvider getTileProvider() {
+        return tileProvider;
+    }
 
-        while (!queue.isEmpty()) {
-            int[] coords = queue.poll();
-            int cx = coords[0];
-            int cy = coords[1];
-            long key = generateKey(cx, cy);
+    public Tile getTileAt(int x, int y, boolean spawnable) {
+        return tileProvider.getTileAt(x, y, spawnable);
+    }
 
-            if (visited.contains(key)) {
-                continue;
-            }
-            visited.add(key);
+    public void saveWorldData() {
+        String folderPath = getWorldSaveFolderPath();
+        new File(folderPath).mkdirs();  // Create folder if it doesn't exist
+        try {
+            tileProvider.saveTileData(folderPath + "/world_data.dat");
+        } catch (IOException e) {
+            System.err.println("Error saving world data: " + e.getMessage());
+        }
+    }
 
-            Tile tile = getTileAt(cx * Config.TILE_SIZE, cy * Config.TILE_SIZE, true);
-
-            if (tile != null && !tile.type.equals("water") && !tile.isObstacle) {
-                landmass.add(key);
-
-                queue.offer(new int[]{cx + 1, cy});
-                queue.offer(new int[]{cx - 1, cy});
-                queue.offer(new int[]{cx, cy + 1});
-                queue.offer(new int[]{cx, cy - 1});
+    private void loadWorldData(String folderPath) {
+        File worldDataFile = new File(folderPath + "/world_data.dat");
+        if (worldDataFile.exists()) {
+            try {
+                tileProvider.loadTileData(worldDataFile.getPath());
+            } catch (IOException | ClassNotFoundException e) {
+                System.err.println("Error loading world data: " + e.getMessage());
             }
         }
+    }
+
+    private String getWorldSaveFolderPath() {
+        return Config.SAVE_DIRECTORY + "/" + worldName;  // Each world has its own folder
     }
 
     public void render(Graphics2D g2, int cameraX, int cameraY, int screenWidth, int screenHeight) {
@@ -93,7 +71,7 @@ public class World {
 
         for (int x = startTileX; x < startTileX + tilesAcross; x++) {
             for (int y = startTileY; y < startTileY + tilesDown; y++) {
-                Tile tile = getTileAt(x * Config.TILE_SIZE, y * Config.TILE_SIZE, false);
+                Tile tile = getTileAt(x * Config.TILE_SIZE, y * Config.TILE_SIZE, true);
                 if (tile != null) {
                     int screenX = (x * Config.TILE_SIZE) - cameraX;
                     int screenY = (y * Config.TILE_SIZE) - cameraY;
@@ -103,7 +81,14 @@ public class World {
         }
     }
 
-    private long generateKey(int x, int y) {
-        return ((long) x << 32) | (y & 0xffffffffL);
+
+    public void updateWorld() {
+        Set<Long> allKeys = tileProvider.getAllGeneratedTileKeys();
+        for (Long key : allKeys) {
+            Tile tile = tileProvider.getTileByKey(key);
+            if (tile != null) {
+                tile.updateRegrowth();
+            }
+        }
     }
 }

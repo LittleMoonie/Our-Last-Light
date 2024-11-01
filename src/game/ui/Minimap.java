@@ -118,6 +118,8 @@ public class Minimap {
                 return new Color(65, 105, 225);
             case "forest":
                 return new Color(0, 100, 0);
+            case "mountain":
+                    return new Color(85, 65, 36);
             default:
                 return Color.BLACK;
         }

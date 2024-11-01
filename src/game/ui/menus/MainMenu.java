@@ -106,13 +106,12 @@ public class MainMenu extends JFrame implements ActionListener {
         }
     }
 
-    public void launchGamePanel(String playerName, boolean isHost, String saveFilePath) {
+    public void launchGamePanel(GamePanel gamePanel, String worldName) {
         // Stop the existing game thread if switching to a new game
         if (currentGamePanel != null) {
-            currentGamePanel.stopGameThread(); // Stop the previous game thread if switching games
+            currentGamePanel.stopGameThread();
         }
 
-        GamePanel gamePanel = new GamePanel(playerName, isHost, saveFilePath, this);
         this.currentGamePanel = gamePanel;
         setContentPane(gamePanel);
         revalidate();

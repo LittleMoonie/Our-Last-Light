@@ -78,18 +78,15 @@ public class MultiplayerMenu extends JPanel implements ActionListener {
             MultiplayerServer server = new MultiplayerServer();
             server.start();
 
-            JFileChooser fileChooser = new JFileChooser(Config.SAVE_DIRECTORY);
-            int option = fileChooser.showOpenDialog(this);
-            File selectedFile = null;
-            if (option == JFileChooser.APPROVE_OPTION) {
-                selectedFile = fileChooser.getSelectedFile();
+            String worldName = JOptionPane.showInputDialog(this, Config.ENTER_WORLD_NAME_PROMPT);
+            if (worldName == null || worldName.trim().isEmpty()) {
+                worldName = "World_" + System.currentTimeMillis();
             }
 
-            String worldPath = (selectedFile != null) ? selectedFile.getAbsolutePath() : Config.SAVE_DIRECTORY + "new_world.json";
-            GamePanel gamePanel = new GamePanel(playerName, true, worldPath, this.parentMenu);
+            String worldPath = Config.SAVE_DIRECTORY + worldName;
+            GamePanel gamePanel = new GamePanel(playerName, true, worldPath, worldName, this.parentMenu);
             gamePanel.setServer(server);
-            parentMenu.launchGamePanel(playerName, true, worldPath);
-            gamePanel.saveGame(worldPath);
+            parentMenu.launchGamePanel(gamePanel, worldName); // New call with world name
         }
     }
 
@@ -98,10 +95,15 @@ public class MultiplayerMenu extends JPanel implements ActionListener {
         if (selectedServer != null) {
             String playerName = JOptionPane.showInputDialog(this, Config.ENTER_PLAYER_NAME_PROMPT);
             if (playerName != null && !playerName.trim().isEmpty()) {
-                GamePanel gamePanel = new GamePanel(playerName, false, null, this.parentMenu);
+                GamePanel gamePanel = new GamePanel(playerName, false, null, "Placeholder", this.parentMenu); // Temp placeholder
                 MultiplayerClient client = new MultiplayerClient(selectedServer, gamePanel);
+
+                // Update worldName in GamePanel after initializing client
+                String actualWorldName = client.getWorldName(); // Assume client retrieves it from server
+                gamePanel.setWorldName(actualWorldName);
+
                 gamePanel.setClient(client);
-                parentMenu.launchGamePanel(playerName, false, null);
+                parentMenu.launchGamePanel(gamePanel, actualWorldName);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Please select a server to join.");

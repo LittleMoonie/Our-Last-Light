@@ -9,4 +9,5 @@ public class GameData {
     public long gameTime;
     public long worldSeed;
     public Map<String, Integer> inventory;
+    public String worldFilePath; // Path to the saved world data
 }
