@@ -1,6 +1,8 @@
 package src.game.ui.menus;
 
 import src.main.GamePanel;
+import src.game.constants.Config;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -16,30 +18,26 @@ public class MainMenu extends JFrame implements ActionListener {
 
     public MainMenu() {
         setTitle("Main Menu");
-        setSize(800, 600); // Adjust to your game's preferred resolution
+        setSize(Config.FRAME_SIZE);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Initialize other menus
         optionsMenu = new OptionsMenu(this);
         multiplayerMenu = new MultiplayerMenu(this);
         singlePlayerMenu = new SinglePlayerMenu(this);
 
-        // Main panel setup with BoxLayout for vertical alignment
         mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
-        mainPanel.setBackground(new Color(20, 20, 20)); // Dark background color
+        mainPanel.setBackground(Config.MAIN_BACKGROUND_COLOR);
 
-        // Add title label
         JLabel titleLabel = new JLabel("Don't Starve Alone", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 36));
+        titleLabel.setFont(Config.TITLE_FONT);
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        mainPanel.add(Box.createVerticalGlue()); // Spacer to center contents vertically
+        mainPanel.add(Box.createVerticalGlue());
         mainPanel.add(titleLabel);
 
-        // Add menu buttons
-        mainPanel.add(Box.createRigidArea(new Dimension(0, 20))); // Spacer
+        mainPanel.add(Box.createRigidArea(new Dimension(0, 20)));
         mainPanel.add(createMenuButton("Single Player"));
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         mainPanel.add(createMenuButton("Multiplayer"));
@@ -47,77 +45,74 @@ public class MainMenu extends JFrame implements ActionListener {
         mainPanel.add(createMenuButton("Options"));
         mainPanel.add(Box.createRigidArea(new Dimension(0, 10)));
         mainPanel.add(createMenuButton("Exit"));
-        mainPanel.add(Box.createVerticalGlue()); // Spacer to center contents vertically
+        mainPanel.add(Box.createVerticalGlue());
 
-        // Set the main panel as the content pane
         setContentPane(mainPanel);
         setVisible(true);
     }
 
-    // Helper method to create a styled menu button
     private JButton createMenuButton(String text) {
         JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(200, 50));
-        button.setMaximumSize(new Dimension(200, 50)); // Ensure consistent button sizing
+        button.setPreferredSize(new Dimension(Config.BUTTON_WIDTH, Config.BUTTON_HEIGHT));
+        button.setMaximumSize(new Dimension(Config.BUTTON_WIDTH, Config.BUTTON_HEIGHT));
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
-        button.setFont(new Font("Arial", Font.PLAIN, 18));
-        button.setBackground(new Color(80, 80, 80));
-        button.setForeground(Color.WHITE);
+        button.setFont(Config.MAIN_FONT);
+        button.setBackground(Config.BUTTON_BACKGROUND_COLOR);
+        button.setForeground(Config.BUTTON_TEXT_COLOR);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 2));
         button.addActionListener(this);
         return button;
     }
 
-    // Show options menu
     public void showOptionsMenu() {
         setContentPane(optionsMenu);
         revalidate();
         repaint();
     }
 
-    // Show single-player menu
     public void showSinglePlayerMenu() {
         setContentPane(singlePlayerMenu);
         revalidate();
         repaint();
     }
 
-    // Show multiplayer menu
     public void showMultiplayerMenu() {
         setContentPane(multiplayerMenu);
         revalidate();
         repaint();
     }
 
-    // Show main menu
     public void showMainMenu() {
         setContentPane(mainPanel);
         revalidate();
         repaint();
     }
 
-    // Display the in-game menu
     public void showInGameMenu(GamePanel gamePanel) {
         if (inGameMenu == null) {
-            inGameMenu = new InGameMenu(this, gamePanel);
+            inGameMenu = new InGameMenu(this, gamePanel);  // Create only if not existing
         }
         setContentPane(inGameMenu);
         revalidate();
         repaint();
     }
 
-    // Return to the game panel after closing in-game menu
     public void returnToGame() {
-        if (currentGamePanel != null) {
+        if (currentGamePanel != null) {  // Ensure currentGamePanel is set
             setContentPane(currentGamePanel);
             revalidate();
             repaint();
         }
     }
 
-    // Launch the game with the specified GamePanel
-    public void launchGamePanel(GamePanel gamePanel) {
+    public void launchGamePanel(String playerName, boolean isHost, String saveFilePath) {
+        // Stop the existing game thread if switching to a new game
+        if (currentGamePanel != null) {
+            currentGamePanel.stopGameThread(); // Stop the previous game thread if switching games
+        }
+
+        GamePanel gamePanel = new GamePanel(playerName, isHost, saveFilePath, this);
         this.currentGamePanel = gamePanel;
         setContentPane(gamePanel);
         revalidate();

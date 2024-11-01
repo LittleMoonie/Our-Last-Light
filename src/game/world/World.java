@@ -1,7 +1,8 @@
 package src.game.world;
 
-import src.game.constants.GameConstants;
+import src.game.constants.Config;
 
+import java.awt.*;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Queue;
@@ -10,8 +11,6 @@ import java.util.Set;
 public class World {
     private TileProvider tileProvider;
     private long worldSeed;
-
-    private static final int TILE_SIZE = GameConstants.TILE_SIZE;
 
     public World(long seed) {
         this.worldSeed = seed;
@@ -30,7 +29,6 @@ public class World {
         return worldSeed;
     }
 
-    // Implement the findLargestLandmass method
     public Set<Long> findLargestLandmass(int centerX, int centerY, int radius) {
         Set<Long> visited = new HashSet<>();
         Set<Long> largestLandmass = new HashSet<>();
@@ -40,7 +38,6 @@ public class World {
         int startY = centerY - radius;
         int endY = centerY + radius;
 
-        // Iterate over the area to find all landmasses
         for (int x = startX; x <= endX; x++) {
             for (int y = startY; y <= endY; y++) {
                 long key = generateKey(x, y);
@@ -74,16 +71,34 @@ public class World {
             }
             visited.add(key);
 
-            Tile tile = getTileAt(cx * TILE_SIZE, cy * TILE_SIZE, true);
+            Tile tile = getTileAt(cx * Config.TILE_SIZE, cy * Config.TILE_SIZE, true);
 
             if (tile != null && !tile.type.equals("water") && !tile.isObstacle) {
                 landmass.add(key);
 
-                // Add neighboring tiles to the queue
                 queue.offer(new int[]{cx + 1, cy});
                 queue.offer(new int[]{cx - 1, cy});
                 queue.offer(new int[]{cx, cy + 1});
                 queue.offer(new int[]{cx, cy - 1});
+            }
+        }
+    }
+
+    public void render(Graphics2D g2, int cameraX, int cameraY, int screenWidth, int screenHeight) {
+        int tilesAcross = screenWidth / Config.TILE_SIZE + 2;
+        int tilesDown = screenHeight / Config.TILE_SIZE + 2;
+
+        int startTileX = cameraX / Config.TILE_SIZE;
+        int startTileY = cameraY / Config.TILE_SIZE;
+
+        for (int x = startTileX; x < startTileX + tilesAcross; x++) {
+            for (int y = startTileY; y < startTileY + tilesDown; y++) {
+                Tile tile = getTileAt(x * Config.TILE_SIZE, y * Config.TILE_SIZE, false);
+                if (tile != null) {
+                    int screenX = (x * Config.TILE_SIZE) - cameraX;
+                    int screenY = (y * Config.TILE_SIZE) - cameraY;
+                    g2.drawImage(tile.getImage(), screenX, screenY, Config.TILE_SIZE, Config.TILE_SIZE, null);
+                }
             }
         }
     }

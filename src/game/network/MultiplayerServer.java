@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ConcurrentHashMap;
+import src.game.constants.Config;
 
 public class MultiplayerServer {
     private ServerSocket serverSocket;
@@ -15,8 +16,8 @@ public class MultiplayerServer {
 
     public void start() {
         try {
-            serverSocket = new ServerSocket(5000);
-            System.out.println("Server started on port 5000");
+            serverSocket = new ServerSocket(Config.SERVER_PORT);
+            System.out.println("Server started on port " + Config.SERVER_PORT);
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -29,11 +30,9 @@ public class MultiplayerServer {
     }
 
     public boolean registerClient(String playerName, ClientHandler handler) {
-        // If the name is already taken, deny registration
         if (clients.containsKey(playerName)) {
             return false;
         }
-        // Register the client
         clients.put(playerName, handler);
         System.out.println("Player " + playerName + " has joined.");
         return true;
@@ -47,7 +46,7 @@ public class MultiplayerServer {
     public void broadcastPlayerPosition(String playerName, int x, int y) {
         String message = "UPDATE_POSITION:" + playerName + "," + x + "," + y;
         for (ClientHandler client : clients.values()) {
-            if (!client.equals(clients.get(playerName))) { // Exclude the sending client
+            if (!client.equals(clients.get(playerName))) {
                 client.sendData(message);
             }
         }

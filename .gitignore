@@ -1,6 +1,7 @@
-/out
+/out/*
 .idea
 *.iml
 *.log
 *.class
 *.jar
+Tes

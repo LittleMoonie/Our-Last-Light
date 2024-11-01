@@ -32,7 +32,6 @@ public class SimplexNoise {
             p[i] = i;
         }
 
-        // Shuffle array
         for (int i = GRADIENT_SIZE_TABLE - 1; i > 0; i--) {
             int index = rand.nextInt(i + 1);
             int temp = p[i];
@@ -45,56 +44,45 @@ public class SimplexNoise {
         }
     }
 
-    // 2D simplex noise
     public double noise(double xin, double yin) {
-        double n0, n1, n2; // Noise contributions from the three corners
+        double n0, n1, n2;
 
-        // Skewing and unskewing factors for 2D
         final double F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
         final double G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
 
-        // Skew the input space to determine which simplex cell we're in
         double s = (xin + yin) * F2;
         int i = fastFloor(xin + s);
         int j = fastFloor(yin + s);
 
         double t = (i + j) * G2;
-        double X0 = i - t; // Unskew the cell origin back to (x,y) space
+        double X0 = i - t;
         double Y0 = j - t;
-        double x0 = xin - X0; // The x,y distances from the cell origin
+        double x0 = xin - X0;
         double y0 = yin - Y0;
 
-        // Determine which simplex we are in
-        int i1, j1; // Offsets for second corner of simplex in (i,j) coords
+        int i1, j1;
         if (x0 > y0) {
-            i1 = 1; j1 = 0; // Lower triangle
+            i1 = 1; j1 = 0;
         } else {
-            i1 = 0; j1 = 1; // Upper triangle
+            i1 = 0; j1 = 1;
         }
 
-        // Offsets for remaining corners
-        double x1 = x0 - i1 + G2; // Offsets for middle corner in (x,y) unskewed coords
+        double x1 = x0 - i1 + G2;
         double y1 = y0 - j1 + G2;
-        double x2 = x0 - 1.0 + 2.0 * G2; // Offsets for last corner
+        double x2 = x0 - 1.0 + 2.0 * G2;
         double y2 = y0 - 1.0 + 2.0 * G2;
 
-        // Hash the coordinates to get the gradient indices
         int ii = i & 255;
         int jj = j & 255;
         int gi0 = perm[ii + perm[jj]] % 12;
         int gi1 = perm[ii + i1 + perm[jj + j1]] % 12;
         int gi2 = perm[ii + 1 + perm[jj + 1]] % 12;
 
-        // Calculate the noise contributions from the three corners
         n0 = calcCornerContribution(x0, y0, grad3[gi0]);
         n1 = calcCornerContribution(x1, y1, grad3[gi1]);
         n2 = calcCornerContribution(x2, y2, grad3[gi2]);
 
-        // Add contributions from each corner to get the final noise value
-        // The result is scaled to return values in the interval [-1,1]
-        double noiseValue = 70.0 * (n0 + n1 + n2);
-
-        return noiseValue;
+        return 70.0 * (n0 + n1 + n2);
     }
 
     private double calcCornerContribution(double x, double y, Grad grad) {

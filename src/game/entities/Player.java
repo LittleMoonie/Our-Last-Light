@@ -1,47 +1,46 @@
 package src.game.entities;
 
-import src.game.constants.GameConstants;
+import src.game.constants.Config;
 import src.game.world.Tile;
 import src.game.world.World;
 
+import javax.imageio.ImageIO;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
-import javax.imageio.ImageIO;
 import java.io.IOException;
 
 public class Player {
     public int x, y; // Pixel coordinates
     public String name;
+    public static final int SIZE = Config.PLAYER_SIZE ;
     public int normalSpeed = 4;
     public int sprintSpeed = 8;
-    public int size = 28;
     public boolean up, down, left, right, sprint;
     public World world;
     public BufferedImage image;
     public Inventory inventory;
 
-    private static final int TILE_SIZE = GameConstants.TILE_SIZE;
+    private static final int TILE_SIZE = Config.TILE_SIZE;
 
     public Player(World world, String name) {
         this.world = world;
         this.name = name;
         inventory = new Inventory();
         try {
-            image = ImageIO.read(getClass().getResourceAsStream("/resources/player.png"));
+            image = ImageIO.read(getClass().getResourceAsStream(Config.PLAYER_IMAGE_PATH));
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        // Find a suitable spawn location
         findSpawnLocation();
     }
 
     private void findSpawnLocation() {
-        int maxAttempts = 1000;
+        int maxAttempts = Config.MAX_SPAWN_ATTEMPTS;
         int attempt = 0;
         int centerX = 0;
         int centerY = 0;
-        int radius = 100; // Search within a 100-tile radius
+        int radius = 100;
 
         while (attempt < maxAttempts) {
             int offsetX = (int) (Math.random() * radius * 2) - radius;
@@ -64,37 +63,37 @@ public class Player {
 
         if (attempt == maxAttempts) {
             System.err.println("Failed to find a valid spawn location.");
-            // Handle this case appropriately
         }
     }
-
     public void update() {
         int currentSpeed = sprint ? sprintSpeed : normalSpeed;
 
-        double dx = 0, dy = 0;
+        // Calculate movement delta based on key states
+        int dx = 0, dy = 0;
+        if (up) dy -= currentSpeed;
+        if (down) dy += currentSpeed;
+        if (left) dx -= currentSpeed;
+        if (right) dx += currentSpeed;
 
-        if (up) dy -= 1;
-        if (down) dy += 1;
-        if (left) dx -= 1;
-        if (right) dx += 1;
-
-        // Normalize movement vector
-        double length = Math.hypot(dx, dy);
-        if (length != 0) {
-            dx = dx / length * currentSpeed;
-            dy = dy / length * currentSpeed;
-
-            int newX = x + (int) dx;
-            int newY = y + (int) dy;
-
-            if (canMoveTo(newX, newY)) {
-                x = newX;
-                y = newY;
-            }
+        // Normalize movement to prevent diagonal speed boost
+        if (dx != 0 && dy != 0) {
+            dx = dx / (int) Math.sqrt(2);
+            dy = dy / (int) Math.sqrt(2);
         }
+
+        int newX = x + dx;
+        int newY = y + dy;
+
+        // Only update position if the player can move to the new position
+        if (canMoveTo(newX, newY)) {
+            x = newX;
+            y = newY;
+        }
+
+        // Trigger resource collection if 'collecting' flag is active
         if (collecting) {
             collectResource();
-            collecting = false;
+            collecting = false; // Reset collecting flag after collection
         }
     }
 
@@ -105,51 +104,27 @@ public class Player {
         return tile != null && !tile.type.equals("water") && !tile.isObstacle;
     }
 
-    boolean collecting = false;
+    public boolean collecting = false;
 
     public void keyPressed(KeyEvent e) {
         int code = e.getKeyCode();
 
-        if (code == KeyEvent.VK_Z || code == KeyEvent.VK_UP) {
-            up = true;
-        }
-        if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
-            down = true;
-        }
-        if (code == KeyEvent.VK_Q || code == KeyEvent.VK_LEFT) {
-            left = true;
-        }
-        if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
-            right = true;
-        }
-        if (code == KeyEvent.VK_SHIFT) {
-            sprint = true;
-        }
-        if (code == KeyEvent.VK_E) {
-            collecting = true;
-        }
+        if (code == KeyEvent.VK_Z || code == KeyEvent.VK_UP) up = true;
+        if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) down = true;
+        if (code == KeyEvent.VK_Q || code == KeyEvent.VK_LEFT) left = true;
+        if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) right = true;
+        if (code == KeyEvent.VK_SHIFT) sprint = true;
     }
 
     public void keyReleased(KeyEvent e) {
         int code = e.getKeyCode();
 
-        if (code == KeyEvent.VK_Z || code == KeyEvent.VK_UP) {
-            up = false;
-        }
-        if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) {
-            down = false;
-        }
-        if (code == KeyEvent.VK_Q || code == KeyEvent.VK_LEFT) {
-            left = false;
-        }
-        if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) {
-            right = false;
-        }
-        if (code == KeyEvent.VK_SHIFT) {
-            sprint = false;
-        }
+        if (code == KeyEvent.VK_Z || code == KeyEvent.VK_UP) up = false;
+        if (code == KeyEvent.VK_S || code == KeyEvent.VK_DOWN) down = false;
+        if (code == KeyEvent.VK_Q || code == KeyEvent.VK_LEFT) left = false;
+        if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) right = false;
+        if (code == KeyEvent.VK_SHIFT) sprint = false;
     }
-
     public BufferedImage getImage() {
         return image;
     }
@@ -158,7 +133,6 @@ public class Player {
         Tile currentTile = world.getTileAt(x, y, true);
         if (currentTile.type.equals("forest")) {
             inventory.addItem("Wood", 1);
-            // Change the tile to grass after collecting
             currentTile.setType("grass");
         }
     }

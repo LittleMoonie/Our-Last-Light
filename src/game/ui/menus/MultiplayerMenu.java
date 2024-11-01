@@ -1,6 +1,8 @@
 package src.game.ui.menus;
 
+import com.sun.tools.javac.Main;
 import src.main.GamePanel;
+import src.game.constants.Config;
 import src.game.network.MultiplayerClient;
 import src.game.network.MultiplayerServer;
 
@@ -8,10 +10,6 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
-import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.SocketException;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -25,81 +23,48 @@ public class MultiplayerMenu extends JPanel implements ActionListener {
     private MainMenu parentMenu;
     private Timer serverDiscoveryTimer;
 
-    private DatagramSocket discoverySocket;
-    private boolean running;
-
     public MultiplayerMenu(MainMenu parent) {
         this.parentMenu = parent;
 
-        // Initialize buttons
         hostGameButton = createMenuButton("Host Game");
         joinGameButton = createMenuButton("Join Selected Game");
         backButton = createMenuButton("Back");
 
-        // Initialize server list
         serverListModel = new DefaultListModel<>();
         serverList = new JList<>(serverListModel);
         serverList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Layout
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         add(new JScrollPane(serverList));
         add(hostGameButton);
         add(joinGameButton);
         add(backButton);
 
-        try {
-            discoverySocket = new DatagramSocket(5001);
-            running = true;
-            new Thread(this::listenForDiscoveryRequests).start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
         startServerDiscovery();
     }
 
-    // Helper method for creating styled buttons
     private JButton createMenuButton(String text) {
         JButton button = new JButton(text);
         button.setAlignmentX(CENTER_ALIGNMENT);
+        button.setFont(Config.MAIN_FONT);
+        button.setBackground(Config.BUTTON_BACKGROUND_COLOR);
+        button.setForeground(Config.BUTTON_TEXT_COLOR);
+        button.setFocusPainted(false);
         button.addActionListener(this);
         return button;
     }
 
-    private void listenForDiscoveryRequests() {
-        byte[] buffer = new byte[256];
-        while (running) {
-            try {
-                DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-                discoverySocket.receive(packet);
-                String request = new String(packet.getData(), 0, packet.getLength());
-
-                if ("DISCOVER_SERVER".equals(request)) {
-                    String response = "Game Server"; // Server info
-                    byte[] responseData = response.getBytes();
-                    DatagramPacket responsePacket = new DatagramPacket(responseData, responseData.length, packet.getAddress(), packet.getPort());
-                    discoverySocket.send(responsePacket);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    // Continuously refresh LAN servers
     private void startServerDiscovery() {
         serverDiscoveryTimer = new Timer();
         serverDiscoveryTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                List<String> availableServers = MultiplayerClient.discoverLANServers(); // Replace with actual discovery method
+                List<String> availableServers = MultiplayerClient.discoverLANServers();
                 updateServerList(availableServers);
             }
-        }, 0, 3000); // Refresh every 3 seconds
+        }, 0, 3000);
     }
 
-    // Update the server list displayed in the UI
     private void updateServerList(List<String> availableServers) {
         serverListModel.clear();
         for (String server : availableServers) {
@@ -108,35 +73,35 @@ public class MultiplayerMenu extends JPanel implements ActionListener {
     }
 
     private void hostGame() {
-        String playerName = JOptionPane.showInputDialog(this, "Enter your name:");
+        String playerName = JOptionPane.showInputDialog(this, Config.ENTER_PLAYER_NAME_PROMPT);
         if (playerName != null && !playerName.trim().isEmpty()) {
             MultiplayerServer server = new MultiplayerServer();
             server.start();
 
-            JFileChooser fileChooser = new JFileChooser("saves/");
+            JFileChooser fileChooser = new JFileChooser(Config.SAVE_DIRECTORY);
             int option = fileChooser.showOpenDialog(this);
             File selectedFile = null;
             if (option == JFileChooser.APPROVE_OPTION) {
                 selectedFile = fileChooser.getSelectedFile();
             }
 
-            String worldPath = (selectedFile != null) ? selectedFile.getAbsolutePath() : "saves/new_world.json";
-            GamePanel gamePanel = new GamePanel(playerName, true, worldPath);
+            String worldPath = (selectedFile != null) ? selectedFile.getAbsolutePath() : Config.SAVE_DIRECTORY + "new_world.json";
+            GamePanel gamePanel = new GamePanel(playerName, true, worldPath, this.parentMenu);
             gamePanel.setServer(server);
-            parentMenu.launchGamePanel(gamePanel);
-            gamePanel.saveGame(worldPath); // Automatically save the world when hosting
+            parentMenu.launchGamePanel(playerName, true, worldPath);
+            gamePanel.saveGame(worldPath);
         }
     }
 
     private void joinGame() {
         String selectedServer = serverList.getSelectedValue();
         if (selectedServer != null) {
-            String playerName = JOptionPane.showInputDialog(this, "Enter your name:");
+            String playerName = JOptionPane.showInputDialog(this, Config.ENTER_PLAYER_NAME_PROMPT);
             if (playerName != null && !playerName.trim().isEmpty()) {
-                GamePanel gamePanel = new GamePanel(playerName, false, null);
+                GamePanel gamePanel = new GamePanel(playerName, false, null, this.parentMenu);
                 MultiplayerClient client = new MultiplayerClient(selectedServer, gamePanel);
                 gamePanel.setClient(client);
-                parentMenu.launchGamePanel(gamePanel);
+                parentMenu.launchGamePanel(playerName, false, null);
             }
         } else {
             JOptionPane.showMessageDialog(this, "Please select a server to join.");
@@ -144,9 +109,8 @@ public class MultiplayerMenu extends JPanel implements ActionListener {
     }
 
     public void stop() {
-        running = false;
-        if (discoverySocket != null && !discoverySocket.isClosed()) {
-            discoverySocket.close();
+        if (serverDiscoveryTimer != null) {
+            serverDiscoveryTimer.cancel();
         }
     }
 
@@ -158,7 +122,7 @@ public class MultiplayerMenu extends JPanel implements ActionListener {
             joinGame();
         } else if (e.getSource() == backButton) {
             parentMenu.showMainMenu();
-            serverDiscoveryTimer.cancel(); // Stop refreshing the server list
+            stop();
         }
     }
 }

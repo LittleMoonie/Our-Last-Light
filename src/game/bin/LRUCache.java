@@ -7,7 +7,7 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V> {
     private int maxEntries;
 
     public LRUCache(int maxEntries) {
-        super(maxEntries + 1, 0.75f, true); // Access order
+        super(maxEntries + 1, 0.75f, true);
         this.maxEntries = maxEntries;
     }
 

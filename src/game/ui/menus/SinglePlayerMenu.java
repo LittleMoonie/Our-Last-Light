@@ -1,6 +1,7 @@
 package src.game.ui.menus;
 
 import src.main.GamePanel;
+import src.game.constants.Config;
 
 import javax.swing.*;
 import java.awt.*;
@@ -19,23 +20,19 @@ public class SinglePlayerMenu extends JPanel implements ActionListener {
     public SinglePlayerMenu(MainMenu parent) {
         this.parentMenu = parent;
 
-        // Set up the panel layout
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
-        setBackground(new Color(20, 20, 20)); // Dark background
+        setBackground(Config.MAIN_BACKGROUND_COLOR);
 
-        // Title label
         JLabel titleLabel = new JLabel("Select World", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
+        titleLabel.setFont(Config.LABEL_FONT);
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Initialize buttons
         loadGameButton = createMenuButton("Load Selected World");
         createNewWorldButton = createMenuButton("Create New World");
         backButton = createMenuButton("Back");
 
-        // Load worlds
-        File saveDir = new File("saves/");
+        File saveDir = new File(Config.SAVE_DIRECTORY);
         if (!saveDir.exists()) saveDir.mkdir();
 
         String[] savedWorlds = saveDir.list((dir, name) -> name.endsWith(".json"));
@@ -48,8 +45,7 @@ public class SinglePlayerMenu extends JPanel implements ActionListener {
         JScrollPane worldScrollPane = new JScrollPane(worldList);
         worldScrollPane.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // Add components to the panel
-        add(Box.createVerticalGlue()); // Center the layout vertically
+        add(Box.createVerticalGlue());
         add(titleLabel);
         add(Box.createRigidArea(new Dimension(0, 15)));
         add(worldScrollPane);
@@ -59,18 +55,17 @@ public class SinglePlayerMenu extends JPanel implements ActionListener {
         add(createNewWorldButton);
         add(Box.createRigidArea(new Dimension(0, 10)));
         add(backButton);
-        add(Box.createVerticalGlue()); // Center the layout vertically
+        add(Box.createVerticalGlue());
     }
 
-    // Helper method to create styled menu buttons
     private JButton createMenuButton(String text) {
         JButton button = new JButton(text);
-        button.setPreferredSize(new Dimension(200, 50));
-        button.setMaximumSize(new Dimension(200, 50));
+        button.setPreferredSize(new Dimension(Config.BUTTON_WIDTH, Config.BUTTON_HEIGHT));
+        button.setMaximumSize(new Dimension(Config.BUTTON_WIDTH, Config.BUTTON_HEIGHT));
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
-        button.setFont(new Font("Arial", Font.PLAIN, 18));
-        button.setBackground(new Color(80, 80, 80));
-        button.setForeground(Color.WHITE);
+        button.setFont(Config.MAIN_FONT);
+        button.setBackground(Config.BUTTON_BACKGROUND_COLOR);
+        button.setForeground(Config.BUTTON_TEXT_COLOR);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 2));
         button.addActionListener(this);
@@ -80,10 +75,16 @@ public class SinglePlayerMenu extends JPanel implements ActionListener {
     private void loadSelectedWorld() {
         String selectedWorld = worldList.getSelectedValue();
         if (selectedWorld != null) {
-            String playerName = JOptionPane.showInputDialog(this, "Enter your player name:");
+            String playerName = JOptionPane.showInputDialog(this, Config.ENTER_PLAYER_NAME_PROMPT);
             if (playerName != null && !playerName.trim().isEmpty()) {
-                GamePanel gamePanel = new GamePanel(playerName, true, "saves/" + selectedWorld);
-                parentMenu.launchGamePanel(gamePanel);
+                GamePanel gamePanel = new GamePanel(playerName, true, Config.SAVE_DIRECTORY + selectedWorld, this.parentMenu);
+
+                // Set GamePanel as the content pane and start the game
+                JFrame mainFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+                mainFrame.setContentPane(gamePanel);
+                mainFrame.revalidate();
+                mainFrame.repaint();
+                gamePanel.startGameThread();
             }
         } else {
             JOptionPane.showMessageDialog(this, "Please select a world to load.");
@@ -91,27 +92,34 @@ public class SinglePlayerMenu extends JPanel implements ActionListener {
     }
 
     private void createNewWorld() {
-        String worldName = JOptionPane.showInputDialog(this, "Enter a name for your new world:");
+        String worldName = JOptionPane.showInputDialog(this, Config.ENTER_WORLD_NAME_PROMPT);
         if (worldName != null && !worldName.trim().isEmpty()) {
-            String filePath = "saves/" + worldName + ".json";
+            String filePath = Config.SAVE_DIRECTORY + worldName + ".json";
             File newWorldFile = new File(filePath);
 
             if (newWorldFile.exists()) {
-                JOptionPane.showMessageDialog(this, "A world with this name already exists. Please choose a different name.");
+                JOptionPane.showMessageDialog(this, Config.WORLD_EXISTS_MESSAGE);
                 return;
             }
 
             try {
                 if (newWorldFile.createNewFile()) {
-                    GamePanel gamePanel = new GamePanel(worldName, true, filePath);
-                    parentMenu.launchGamePanel(gamePanel);
-                    gamePanel.saveGame(filePath); // Automatically save the newly created world
+                    GamePanel gamePanel = new GamePanel(worldName, true, filePath, this.parentMenu);
+
+                    // Set GamePanel as the content pane and start the game
+                    JFrame mainFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+                    mainFrame.setContentPane(gamePanel);
+                    mainFrame.revalidate();
+                    mainFrame.repaint();
+                    gamePanel.startGameThread();
+
+                    gamePanel.saveGame(filePath);
                 } else {
                     JOptionPane.showMessageDialog(this, "Failed to create the world file.");
                 }
             } catch (IOException ex) {
                 ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "An error occurred while creating the world.");
+                JOptionPane.showMessageDialog(this, Config.CREATE_WORLD_ERROR_MESSAGE);
             }
         }
     }
@@ -123,7 +131,7 @@ public class SinglePlayerMenu extends JPanel implements ActionListener {
         } else if (e.getSource() == createNewWorldButton) {
             createNewWorld();
         } else if (e.getSource() == backButton) {
-            parentMenu.showMainMenu(); // Return to the main menu
+            parentMenu.showMainMenu();
         }
     }
 }

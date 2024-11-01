@@ -2,6 +2,7 @@ package src.game.network;
 
 import src.game.entities.Player;
 import src.main.GamePanel;
+import src.game.constants.Config;
 
 import javax.swing.*;
 import java.io.*;
@@ -24,7 +25,7 @@ public class MultiplayerClient {
         this.playerName = gamePanel.getPlayer().name;
 
         try {
-            socket = new Socket(serverAddress, 5000);
+            socket = new Socket(serverAddress, Config.SERVER_PORT);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
 
@@ -32,7 +33,7 @@ public class MultiplayerClient {
 
             String response = in.readLine();
             if ("ERROR:NAME_TAKEN".equals(response)) {
-                JOptionPane.showMessageDialog(null, "Name already taken. Please choose a different name.");
+                JOptionPane.showMessageDialog(null, Config.NAME_ALREADY_TAKEN_MESSAGE);
                 socket.close();
                 return;
             }
@@ -88,16 +89,15 @@ public class MultiplayerClient {
         }
     }
 
-    // Method to discover LAN servers using UDP broadcast
     public static List<String> discoverLANServers() {
         List<String> availableServers = new ArrayList<>();
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.setBroadcast(true);
             byte[] requestData = "DISCOVER_SERVER".getBytes();
-            DatagramPacket requestPacket = new DatagramPacket(requestData, requestData.length, InetAddress.getByName("255.255.255.255"), 5001);
+            DatagramPacket requestPacket = new DatagramPacket(requestData, requestData.length, InetAddress.getByName("255.255.255.255"), Config.DISCOVERY_PORT);
             socket.send(requestPacket);
 
-            socket.setSoTimeout(2000); // Wait for responses within 2 seconds
+            socket.setSoTimeout(2000);
             byte[] buffer = new byte[256];
             while (true) {
                 try {

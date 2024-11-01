@@ -9,5 +9,4 @@ public class GameData {
     public long gameTime;
     public long worldSeed;
     public Map<String, Integer> inventory;
-    // Add other necessary fields
 }

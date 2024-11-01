@@ -2,6 +2,7 @@ package src.game.data;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import src.main.GamePanel;
+import src.game.constants.Config;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,7 +17,7 @@ public class SaveHandler {
         gameData.playerName = gamePanel.getPlayer().name;
         gameData.gameTime = gamePanel.getGameTime();
         gameData.worldSeed = gamePanel.getWorld().getWorldSeed();
-        gameData.inventory = gamePanel.getPlayer().inventory.getItems(); // Save the inventory
+        gameData.inventory = gamePanel.getPlayer().inventory.getItems();
 
         try {
             objectMapper.writeValue(new File(saveFilePath), gameData);

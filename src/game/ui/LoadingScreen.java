@@ -1,5 +1,7 @@
 package src.game.ui;
 
+import src.game.constants.Config;
+
 import javax.swing.*;
 import java.awt.*;
 
@@ -16,8 +18,9 @@ public class LoadingScreen {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
 
-        JLabel label = new JLabel("Loading game, please wait...");
+        JLabel label = new JLabel(Config.LOADING_GAME_MESSAGE);
         label.setHorizontalAlignment(SwingConstants.CENTER);
+        label.setFont(Config.MAIN_FONT);
 
         progressBar = new JProgressBar();
         progressBar.setIndeterminate(true);

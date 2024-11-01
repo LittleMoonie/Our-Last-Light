@@ -31,7 +31,6 @@ public class Inventory {
     }
 
     public void draw(Graphics2D g2, int screenWidth) {
-        // Display the inventory items on the screen
         int x = 20;
         int y = 20;
         g2.setColor(Color.WHITE);

@@ -22,7 +22,7 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         try (BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
-            playerName = in.readLine(); // First message is the player name
+            playerName = in.readLine();
             if (!server.registerClient(playerName, this)) {
                 out.println("ERROR:NAME_TAKEN");
                 return;
