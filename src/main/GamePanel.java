@@ -51,8 +51,6 @@
 
         private boolean isMultiplayer = false;
 
-        // Minimap settings
-        private boolean isMinimapExpanded = false;
 
 
         public GamePanel(String playerName, boolean isHost, String saveFilePath) {

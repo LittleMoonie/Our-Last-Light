@@ -9,7 +9,7 @@ public class GameWindow extends JFrame {
     private GraphicsDevice graphicsDevice;
 
     public GameWindow(GamePanel gamePanel) {
-        setTitle("Procedural World Game");
+        setTitle("Don't Starve Alone");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         // Setup full-screen
