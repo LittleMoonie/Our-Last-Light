@@ -1,122 +1,109 @@
-# Don't Starve Alone
-**Don't Starve Alone** is a school project for Epitech Nancy, heavily inspired by the popular game *Don't Starve Together*. This project explores core principles of procedural generation, resource management, and multiplayer game mechanics within an open-world sandbox environment.
+# 🌌 Our Last Light
 
-In *Don't Starve Alone*, players enter a harsh, procedurally generated world where the main objective is simple: survive. Gather resources, craft tools, and overcome the many challenges presented by a dynamic, evolving environment.
+**Our Last Light** is a survival adventure game built in Java for a school project at Epitech Nancy. Set in a procedurally generated world, players must explore, gather resources, build shelters, and survive in a hostile environment filled with dynamic challenges. The game leverages an **Entity-Component-System (ECS)** architecture to efficiently manage game entities and systems, making the game structure modular and easy to expand.
 
-## 🌎 Game Overview
-In *Don't Starve Alone*, players enter an expansive sandbox world generated uniquely for each session. Set in a harsh, mysterious environment, the objective is simple: survive for as long as possible. Whether playing alone or with friends, players will need to manage resources, explore the environment, and fend off dangers to endure as long as they can.
+## 📜 Table of Contents
 
-### Key Features
-- **Procedural World Generation**: Every world is unique! Terrain, resources, and points of interest are dynamically generated for endless exploration.
-- **Survival Mechanics**: Hunger, weather, and dangerous wildlife are just some of the elements to navigate as you struggle to stay alive.
-- **Resource Gathering and Crafting**: Collect materials to build shelter, craft tools, and create items necessary for survival.
-- **Single-player and Multiplayer Modes**: Choose to venture alone or team up with friends to increase your chances of survival.
+- [Project Overview](#project-overview)
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Gameplay](#gameplay)
+- [ECS Architecture](#ecs-architecture)
+  - [Entity](#entity)
+  - [Component](#component)
+  - [System](#system)
+  - [World](#world)
+- [Procedural Generation](#procedural-generation)
+- [Contributing](#contributing)
+- [License](#license)
+
+## 🌍 Project Overview
+
+**Our Last Light** is designed to immerse players in a mysterious, procedurally generated world where survival depends on skill, resourcefulness, and adaptability. Built as part of a Java programming project, this game emphasizes modular design through the **Entity-Component-System (ECS)** architecture, allowing for scalable gameplay and clean separation of data and logic.
+
+## ✨ Features
+
+- **Procedurally Generated World**: Dynamic biomes, resources, and landmarks appear randomly, offering a unique experience each time.
+- **Survival Mechanics**: Manage hunger, thirst, health, and stamina while fending off environmental hazards.
+- **Modular Character Abilities**: Different classes, each with unique abilities and perks.
+- **Day/Night Cycle**: Distinct gameplay experiences during the day and night, affecting visibility, resource availability, and danger levels.
+- **Camp Building**: Build and upgrade your camp to increase safety and expand survival options.
 
 ## 🚀 Getting Started
-### Prerequisites
-To run *Don't Starve Alone*, make sure you have the following installed:
 
-- **Java Development Kit (JDK)**: Version 17 or above is recommended.
-- **Git**: (for cloning the repository)
+### Prerequisites
+
+- **Java 8** or higher
+- A Java IDE or compiler (e.g., IntelliJ IDEA, Eclipse, or command-line `javac`)
+
 ### Installation
-Clone the repository:
-```bash
-git clone https://github.com/yourusername/DontStarveAlone.git
+
+1. Clone the repository:
+   ```bash
+   git clone [https://github.com/LittleMoonie/our-last-light.git](https://github.com/LittleMoonie/Our-Last-Light.git)
+   cd our-last-light
 ```
-Navigate into the project directory:
+Compile the Java files:
+
 ```bash
-cd DontStarveAlone
-```
-Compile the project:
-```bash
-javac -d out/production/DontStarveAlone src/**/*.java
+javac -d bin src/*.java
 ```
 Run the game:
-```bash
-java -classpath out/production/DontStarveAlone src.main.GameLauncher
-
-```
-### Project Structure
-The main components of the project are organized as follows:
 
 ```bash
-src
-├── game
-│   ├── constants         # Game configuration and constants
-│   ├── data              # Save/load functionality and data management
-│   ├── entities          # Game entities like Player, World objects, etc.
-│   ├── network           # Multiplayer networking components
-│   ├── ui                # User interface components
-│   └── world             # World generation, terrain, and tile management
-└── main
-    ├── GamePanel.java    # Main game panel, handles game logic and rendering
-    └── GameLauncher.java # Entry point for launching the game
+java -cp bin GameLauncher
 ```
-## 🎮 How to Play
-1. **Launch the Game**: Start the game from the main menu. You can choose to play in Single Player or Multiplayer mode.
 
-2. **Explore the World**: Navigate through randomly generated biomes, each with unique resources and dangers.
+## 🎲 Gameplay
+In Our Last Light, players navigate a procedurally generated world filled with dangers and mysteries. Survive by managing your resources, crafting tools, and building a safe camp. Each class has unique strengths and weaknesses, so strategy and planning are crucial to survival.
 
-3. **Gather Resources**: Collect essential items like wood, stone, and food to survive and craft tools.
+## 🧩 ECS Architecture
+Our Last Light is structured using an Entity-Component-System (ECS) design pattern, which breaks down game elements into modular components, making the game easier to expand and maintain.
 
-4. **Craft and Build**: Use gathered resources to craft tools, shelter, and items that improve your chances of survival.
+### Entity
+The Entity class represents any object in the game world, such as characters, items, and environmental elements. Entities contain only components (data), not behavior.
 
-5. **Survive**: Manage your hunger and health while avoiding or fighting off wildlife. Surviving through the night brings additional challenges.
+### Component
+Components are pure data holders that define the attributes of entities. Examples include:
 
-6. **Multiplayer**: Host a game to allow friends to join, or discover available servers to team up and share the survival experience.
+- PositionComponent: Stores an entity's position in the world.
+- HealthComponent: Tracks health points.
+- VelocityComponent: Contains movement speed and direction.
 
-## 🌐 Multiplayer Features
-### Hosting a Game
-1. From the **Multiplayer Menu**, select **Host Game**.
-2. Enter a player name and start a session. Other players can discover your game and 
-join via LAN.
-### Joining a Game
-1. From the **Multiplayer Menu**, select **Join Game**.
-2. Browse available servers or manually enter an IP address if connecting over LAN.
-3. Enter a player name and join the session.
-## 🛠 Configuration
-### Game Settings
-Adjust game parameters, such as:
+### System
+Systems contain the logic of the game and operate on entities with specific components. Examples of systems include:
 
-- **Resolution and Display Mode**: Customize windowed or fullscreen options.
-- **Controls**: Key bindings for movement, interaction, and inventory management.
-- **Audio Levels**: Volume controls for background music and sound effects.
-These settings can be accessed through the **Options Menu** from the main menu.
+- MovementSystem: Updates positions based on velocity.
+- HealthSystem: Manages health status and conditions.
+- ProceduralGenerationSystem: Handles the generation of biomes, resources, and terrain.
 
-## 📂 Saving and Loading
-Your world data is saved automatically, allowing you to pick up right where you left off. Save files are stored in the `saves` directory within the project folder. To load a saved game:
+### World
+The World class acts as the main orchestrator, managing entities and systems. It updates each system in the game loop and handles entity lifecycle events.
 
-1. Go to **Single Player Menu** > **Load Game**.
-2. Select a saved world to resume your progress.
-## 📚 Documentation
-For more detailed information on each class, its responsibilities, and its methods, please refer to our Documentation. Here you'll find in-depth descriptions of each module and guidelines for expanding or modifying the code.
+```java
+public class World {
+    private List<Entity> entities;
+    private List<System> systems;
 
-## 🌟 Contributing
-Contributions are welcome! To contribute:
-
-1. Fork the project.
-2. Create a new branch 
-```bash 
-git checkout -b feature/YourFeature
+    public void update(float deltaTime) {
+        for (System system : systems) {
+            system.update(deltaTime);
+        }
+    }
+}
 ```
-3. Commit your changes 
-```bash
-git commit -m 'Add Your Feature'
-```
-4. Push to the branch 
-```bash
-git push origin feature/YourFeature
-```
-5. Create a pull request for review.
-## ⚠️ Troubleshooting
-### Common Issues
-- **Gray Screen on Startup**: Ensure all dependencies are properly loaded and the project is compiled correctly.
-- **Multiplayer Connection Issues**: Verify network settings and ensure that necessary ports are open.
-- **Player Movement Issues**: Check key bindings and verify that the `GamePanel` is receiving focus for input.
-For other issues, please check the documentation or open a GitHub issue.
 
-## 📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 🗺️ Procedural Generation
+The **Procedural Generation System** is responsible for creating the game world. It generates various biomes, places resources, and populates the environment with enemies and items, ensuring a unique layout each time the game is played. The system allows for adjustable parameters, making it easy to tweak the difficulty and density of resources.
+
+## 🤝 Contributing
+Contributions are welcome! If you'd like to contribute to the development of Our Last Light, please follow these steps:
+
+🔗 Links
+Project Repository: GitHub Repository
+Documentation: Coming soon
+Our Last Light is a collaborative project by students at Epitech Nancy as a demonstration of advanced programming techniques and game development principles. We hope you enjoy exploring the mysteries of our world and surviving its dangers!
+
+Note: This is a school project. Please feel free to reach out to the developers for questions, feedback, or collaboration opportunities!
 
 ---
-Don't Starve Alone is an adventure where survival hinges on your resourcefulness and bravery. Dive in, adapt, and see how long you can survive in this unforgiving world!
