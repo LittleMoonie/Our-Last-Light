@@ -39,7 +39,7 @@
 ### Installation
 
 1. Clone the repository:
-   ```bash
+```bash
    git clone [https://github.com/LittleMoonie/our-last-light.git](https://github.com/LittleMoonie/Our-Last-Light.git)
    cd our-last-light
 ```
