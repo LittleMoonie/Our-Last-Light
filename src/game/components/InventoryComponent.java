@@ -1,5 +1,8 @@
 package src.game.components;
 
+import src.game.entities.Entity;
+
+import java.awt.*;
 import java.util.HashMap;
 import java.util.Map;
 

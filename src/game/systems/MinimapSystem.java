@@ -11,10 +11,10 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public class MinimapSystem extends System {
-    private World world;
+    private final World world;
     private BufferedImage minimapImage;
-    private int width = 150;
-    private int height = 150;
+    private final int width = 150;
+    private final int height = 150;
     private long lastUpdateTime = 0;
     private final long updateInterval;
 
@@ -49,12 +49,11 @@ public class MinimapSystem extends System {
         MinimapComponent minimap = entity.getComponent(MinimapComponent.class);
         if (minimap == null) return;
 
-        int minimapX, minimapY;
         int displayedWidth = minimap.isExpanded ? (int) (width * 1.5) : width;
         int displayedHeight = minimap.isExpanded ? (int) (height * 1.5) : height;
 
-        minimapX = minimap.isExpanded ? (screenWidth - displayedWidth) / 2 : screenWidth - width - 20;
-        minimapY = minimap.isExpanded ? (screenHeight - displayedHeight) / 2 : 20;
+        int minimapX = minimap.isExpanded ? (screenWidth - displayedWidth) / 2 : screenWidth - width - 20;
+        int minimapY = minimap.isExpanded ? (screenHeight - displayedHeight) / 2 : 20;
 
         g2.drawImage(minimapImage, minimapX, minimapY, displayedWidth, displayedHeight, null);
         g2.setColor(Color.BLACK);
@@ -85,6 +84,13 @@ public class MinimapSystem extends System {
                 g.fillRect(x, y, 1, 1);
             }
         }
+
+        // Draw player position marker
+        g.setColor(Color.RED);
+        int playerMarkerX = width / 2;
+        int playerMarkerY = height / 2;
+        g.fillRect(playerMarkerX - 2, playerMarkerY - 2, 5, 5);
+
         g.dispose();
     }
 

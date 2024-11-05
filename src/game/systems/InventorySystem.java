@@ -3,6 +3,7 @@ package src.game.systems;
 import src.game.components.InventoryComponent;
 import src.game.entities.Entity;
 
+import java.awt.*;
 import java.util.Map;
 
 public class InventorySystem extends System {
@@ -77,6 +78,54 @@ public class InventorySystem extends System {
         InventoryComponent inventory = entity.getComponent(InventoryComponent.class);
         if (inventory != null) {
             java.lang.System.out.println("Inventory of " + entity + ": " + inventory.getItems());
+        }
+    }
+
+
+    // Method to draw the inventory contents
+    public void drawInventory(Graphics2D g2, Entity entity, int screenWidth, int screenHeight) {
+        InventoryComponent inventory = entity.getComponent(InventoryComponent.class);
+        if (inventory == null) return;
+
+        // Define dimensions and styles for the inventory display
+        int panelWidth = 200;
+        int panelHeight = 300;
+        int padding = 10;
+        int startX = screenWidth - panelWidth - padding;
+        int startY = padding;
+
+        // Draw the inventory panel background
+        g2.setColor(new Color(0, 0, 0, 150)); // Semi-transparent black
+        g2.fillRect(startX, startY, panelWidth, panelHeight);
+
+        // Draw a border around the panel
+        g2.setColor(Color.WHITE);
+        g2.drawRect(startX, startY, panelWidth, panelHeight);
+
+        // Set font and color for inventory text
+        g2.setFont(new Font("Arial", Font.PLAIN, 14));
+        g2.setColor(Color.WHITE);
+
+        // Draw inventory title
+        g2.drawString("Inventory", startX + padding, startY + padding + 15);
+
+        // Draw each item in the inventory with its quantity
+        int itemY = startY + padding + 40; // Start position for item list
+        for (Map.Entry<String, Integer> entry : inventory.getItems().entrySet()) {
+            String itemName = entry.getKey();
+            int quantity = entry.getValue();
+            String itemDisplay = itemName + " x" + quantity;
+
+            // Draw the item text
+            g2.drawString(itemDisplay, startX + padding, itemY);
+
+            // Move down for the next item
+            itemY += 20;
+        }
+
+        // If there are no items in the inventory
+        if (inventory.getItems().isEmpty()) {
+            g2.drawString("Empty", startX + padding, itemY);
         }
     }
 }

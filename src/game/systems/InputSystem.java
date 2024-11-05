@@ -22,15 +22,16 @@ public class InputSystem extends System {
         if (input == null) return;
 
         int code = e.getKeyCode();
-        if (code == KeyEvent.VK_W) input.up = true;
+        if (code == KeyEvent.VK_Z) input.up = true;
         if (code == KeyEvent.VK_S) input.down = true;
-        if (code == KeyEvent.VK_A) input.left = true;
+        if (code == KeyEvent.VK_Q) input.left = true;
         if (code == KeyEvent.VK_D) input.right = true;
         if (code == KeyEvent.VK_SHIFT) input.sprint = true;
 
         // Set flags for actions triggered by single key presses
-        if (code == KeyEvent.VK_E) input.collecting = true;
-        if (code == KeyEvent.VK_I) input.showInventory = true;
+        if (code == KeyEvent.VK_F) input.collecting = true;
+        if (code == KeyEvent.VK_E) input.showInventory = true;
+        if (code == KeyEvent.VK_M) input.showMinimap = true;
     }
 
     public void keyReleased(Entity entity, KeyEvent e) {
@@ -38,9 +39,9 @@ public class InputSystem extends System {
         if (input == null) return;
 
         int code = e.getKeyCode();
-        if (code == KeyEvent.VK_W) input.up = false;
+        if (code == KeyEvent.VK_Z) input.up = false;
         if (code == KeyEvent.VK_S) input.down = false;
-        if (code == KeyEvent.VK_A) input.left = false;
+        if (code == KeyEvent.VK_Q) input.left = false;
         if (code == KeyEvent.VK_D) input.right = false;
         if (code == KeyEvent.VK_SHIFT) input.sprint = false;
     }
