@@ -1,5 +1,6 @@
 package src.main;
 
+import src.game.camera.PlayerCamera;
 import src.game.components.*;
 import src.game.components.stats.*;
 import src.game.constants.Config;
@@ -16,6 +17,8 @@ import src.game.ui.menus.MainMenu;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
@@ -25,7 +28,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class GamePanel extends JPanel implements Runnable, KeyListener {
+public class GamePanel extends JPanel implements Runnable, KeyListener, ComponentListener {
     private PlayerEntity playerEntity;
     private World world;
     private List<Entity> entities;
@@ -41,6 +44,8 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     private StaminaSystem staminaSystem;
     private SanitySystem sanitySystem;
 
+    private PlayerCamera playerCamera;
+
     private Thread gameThread;
     private MultiplayerServer server;
     private boolean isMultiplayer = false;
@@ -54,7 +59,6 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         entities = new ArrayList<>();
         world = new World(System.currentTimeMillis());
 
-        // Initialize systems
         inputSystem = new InputSystem();
         movementSystem = new MovementSystem(world);
         inventorySystem = new InventorySystem();
@@ -65,15 +69,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         staminaSystem = new StaminaSystem();
         sanitySystem = new SanitySystem();
 
-        // Create player entity and add it to entities
-        playerEntity = new PlayerEntity(playerName, 100, 100); // Ensure this is of type PlayerEntity
+        playerEntity = new PlayerEntity(playerName, 100, 100);
         entities.add(playerEntity);
+
+        playerCamera = new PlayerCamera();
 
         setPreferredSize(new Dimension(Config.FRAME_SIZE.width, Config.FRAME_SIZE.height));
         setBackground(Config.MAIN_BACKGROUND_COLOR);
         setDoubleBuffered(true);
         addKeyListener(this);
         setFocusable(true);
+
+        addComponentListener(this);
     }
 
     public void initializeFromData(GameData gameData) {
@@ -198,24 +205,27 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     @Override
     public void keyTyped(KeyEvent e) {}
 
-
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
-        if (world != null && playerEntity != null) {
-            PositionComponent position = playerEntity.getComponent(PositionComponent.class);
-            int cameraX = position.getX() - getWidth() / 2;
-            int cameraY = position.getY() - getHeight() / 2;
+        // Update the camera based on the player's position
+        playerCamera.update(playerEntity, getSize());
 
-            // Draw the world around the player
+        // Get the camera position after updating it
+        Point cameraPosition = playerCamera.getCameraPosition();
+        int cameraX = cameraPosition.x;
+        int cameraY = cameraPosition.y;
+
+        if (world != null && playerEntity != null) {
+            // Draw the world using the updated camera position
             world.render(g2, cameraX, cameraY, getWidth(), getHeight());
 
-            // Draw the player image at the center of the screen
+            // Draw the player image
             BufferedImage playerImage = playerEntity.getPlayerImage();
             if (playerImage != null) {
-                // Player's world position
+                PositionComponent position = playerEntity.getComponent(PositionComponent.class);
                 int playerWorldX = position.getX();
                 int playerWorldY = position.getY();
 
@@ -223,18 +233,18 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
                 int playerPositionX = playerWorldX - cameraX;
                 int playerPositionY = playerWorldY - cameraY;
 
-                // Scale the player image to be 5x smaller
+                // Scale the player image
                 int scaledWidth = playerImage.getWidth() / 5;
                 int scaledHeight = playerImage.getHeight() / 5;
 
-                // Center the image on the player's screen position
+                // Center the player image on screen
                 int playerDrawX = playerPositionX - scaledWidth / 2;
                 int playerDrawY = playerPositionY - scaledHeight / 2;
 
                 g2.drawImage(playerImage, playerDrawX, playerDrawY, scaledWidth, scaledHeight, null);
             }
 
-            // Optionally draw the minimap and inventory
+            // Draw minimap and inventory
             minimapSystem.draw(g2, getWidth(), getHeight(), playerEntity);
             if (isInventoryOpen) {
                 inventorySystem.drawInventory(g2, playerEntity, getWidth(), getHeight());
@@ -244,6 +254,23 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         }
     }
 
+
+    @Override
+    public void componentResized(ComponentEvent e) {
+        // Get the new size of the panel
+        Dimension newSize = e.getComponent().getSize();
+        // Update the player camera with the new dimensions
+        playerCamera.update(playerEntity, newSize);
+    }
+
+    @Override
+    public void componentHidden(ComponentEvent e) {}
+
+    @Override
+    public void componentShown(ComponentEvent e) {}
+
+    @Override
+    public void componentMoved(ComponentEvent e) {}
 
     @Override
     public void run() {

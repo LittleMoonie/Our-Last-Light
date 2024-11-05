@@ -3,6 +3,7 @@ package src.game.world;
 
 import src.game.constants.Config;
 import src.game.components.PositionComponent;
+import src.game.constants.WorldConfig;
 import src.game.entities.Entity;
 
 import java.awt.*;
@@ -97,30 +98,29 @@ public class World {
         return new Point(isoX, isoY);
     }
 
-
     public void render(Graphics2D g2, int cameraX, int cameraY, int screenWidth, int screenHeight) {
-        int tilesAcross = screenWidth / Config.TILE_WIDTH + 2;
-        int tilesDown = screenHeight / Config.TILE_WIDTH + 2;
+        int tilesAcross = screenWidth / Config.TILE_WIDTH + 2; // +2 for buffer on the sides
+        int tilesDown = screenHeight / Config.TILE_HEIGHT + 2; // +2 for buffer on top and bottom
 
+        // Determine the starting tile position based on camera position
         int startTileX = cameraX / Config.TILE_WIDTH;
-        int startTileY = cameraY / Config.TILE_WIDTH;
+        int startTileY = cameraY / Config.TILE_HEIGHT;
 
+        // Render the tiles that fit within the screen
         for (int x = startTileX; x < startTileX + tilesAcross; x++) {
             for (int y = startTileY; y < startTileY + tilesDown; y++) {
-                Tile tile = getTileAt(x * Config.TILE_WIDTH, y * Config.TILE_WIDTH, false);
+                Tile tile = getTileAt(x * Config.TILE_WIDTH, y * Config.TILE_HEIGHT, false);
                 if (tile != null) {
-                    // Convert Cartesian coordinates to isometric
-                    Point isoPoint = toIsometric(x, y);
-                    int screenX = isoPoint.x - cameraX;
-                    int screenY = isoPoint.y - cameraY;
+                    // Adjust screenX and screenY for isometric rendering
+                    int screenX = (x - y) * (Config.TILE_WIDTH / 2) + (screenWidth / 2) - cameraX;
+                    int screenY = (x + y) * (Config.TILE_HEIGHT / 2) - cameraY;
 
-                    // Draw the tile in the isometric position
-                    g2.drawImage(tile.getImage(), screenX, screenY, Config.TILE_WIDTH, Config.TILE_WIDTH / 2, null);
+                    // Draw the tile image
+                    g2.drawImage(tile.getImage(), screenX, screenY, null);
                 }
             }
         }
     }
-
 
     private long generateKey(int x, int y) {
         return ((long) x << 32) | (y & 0xffffffffL);
