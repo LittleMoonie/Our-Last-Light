@@ -1,8 +1,9 @@
-// src/game/constants/Config.java
-
 package src.game.constants;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
 
 public class Config {
     // Paths
@@ -45,4 +46,16 @@ public class Config {
     public static final double OBSTACLE_PROBABILITY_FOREST = 0.1;
     public static final int SERVER_PORT = 5000;
     public static final int DISCOVERY_PORT = 5001;
+
+    // Images
+    public static BufferedImage PLAYER_IMAGE;
+
+    static {
+        try {
+            PLAYER_IMAGE = ImageIO.read(Config.class.getResourceAsStream(PLAYER_IMAGE_PATH));
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("Error loading player image from path: " + PLAYER_IMAGE_PATH);
+        }
+    }
 }

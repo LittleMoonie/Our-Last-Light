@@ -1,6 +1,5 @@
 package src.game.ui.menus;
 
-import com.sun.tools.javac.Main;
 import src.main.GamePanel;
 import src.game.constants.Config;
 import src.game.network.MultiplayerClient;
@@ -86,10 +85,16 @@ public class MultiplayerMenu extends JPanel implements ActionListener {
             }
 
             String worldPath = (selectedFile != null) ? selectedFile.getAbsolutePath() : Config.SAVE_DIRECTORY + "new_world.json";
-            GamePanel gamePanel = new GamePanel(playerName, true, worldPath, this.parentMenu);
-            gamePanel.setServer(server);
+
+            // Launch GamePanel with ECS setup for multiplayer host
             parentMenu.launchGamePanel(playerName, true, worldPath);
-            gamePanel.saveGame(worldPath);
+
+            // Initialize the server in the new GamePanel instance
+            GamePanel gamePanel = parentMenu.getCurrentGamePanel();
+            if (gamePanel != null) {
+                gamePanel.setServer(server);
+                gamePanel.saveGame(worldPath);
+            }
         }
     }
 
@@ -98,10 +103,15 @@ public class MultiplayerMenu extends JPanel implements ActionListener {
         if (selectedServer != null) {
             String playerName = JOptionPane.showInputDialog(this, Config.ENTER_PLAYER_NAME_PROMPT);
             if (playerName != null && !playerName.trim().isEmpty()) {
-                GamePanel gamePanel = new GamePanel(playerName, false, null, this.parentMenu);
-                MultiplayerClient client = new MultiplayerClient(selectedServer, gamePanel);
-                gamePanel.setClient(client);
+                // Launch GamePanel for joining multiplayer game
                 parentMenu.launchGamePanel(playerName, false, null);
+
+                // Initialize the client in the new GamePanel instance
+                GamePanel gamePanel = parentMenu.getCurrentGamePanel();
+                if (gamePanel != null) {
+                    MultiplayerClient client = new MultiplayerClient(selectedServer, gamePanel);
+                    gamePanel.setClient(client);
+                }
             }
         } else {
             JOptionPane.showMessageDialog(this, "Please select a server to join.");

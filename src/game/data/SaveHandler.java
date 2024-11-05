@@ -1,26 +1,47 @@
 package src.game.data;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import src.game.components.InventoryComponent;
+import src.game.components.PlayerComponent;
+import src.game.components.PositionComponent;
+import src.game.components.stats.*;
+import src.game.entities.Entity;
 import src.main.GamePanel;
-import src.game.constants.Config;
 
-import java.io.File;
 import java.io.IOException;
 
 public class SaveHandler {
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     public static void saveGame(GamePanel gamePanel, String saveFilePath) {
         GameData gameData = new GameData();
-        gameData.playerX = gamePanel.getPlayer().x;
-        gameData.playerY = gamePanel.getPlayer().y;
-        gameData.playerName = gamePanel.getPlayer().name;
         gameData.gameTime = gamePanel.getGameTime();
         gameData.worldSeed = gamePanel.getWorld().getWorldSeed();
-        gameData.inventory = gamePanel.getPlayer().inventory.getItems();
+
+        for (Entity playerEntity : gamePanel.getPlayerEntities()) {
+            GameData.PlayerData playerData = new GameData.PlayerData();
+
+            PositionComponent position = playerEntity.getComponent(PositionComponent.class);
+            InventoryComponent inventory = playerEntity.getComponent(InventoryComponent.class);
+            HealthComponent health = playerEntity.getComponent(HealthComponent.class);
+            HungerComponent hunger = playerEntity.getComponent(HungerComponent.class);
+            ThirstComponent thirst = playerEntity.getComponent(ThirstComponent.class);
+            StaminaComponent stamina = playerEntity.getComponent(StaminaComponent.class);
+            SanityComponent sanity = playerEntity.getComponent(SanityComponent.class);
+
+            playerData.playerX = position.x;
+            playerData.playerY = position.y;
+            playerData.playerName = playerEntity.getComponent(PlayerComponent.class).name; // Assuming a PlayerComponent with a name
+            playerData.inventory = inventory.getItems();
+            if (health != null) playerData.health = health.getHealth();
+            if (hunger != null) playerData.hunger = hunger.getHunger();
+            if (thirst != null) playerData.thirst = thirst.getThirst();
+            if (stamina != null) playerData.stamina = stamina.getStamina();
+            if (sanity != null) playerData.sanity = sanity.getSanity();
+
+            gameData.players.put(playerData.playerName, playerData);
+        }
 
         try {
-            objectMapper.writeValue(new File(saveFilePath), gameData);
+            gameData.saveToFile(saveFilePath);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -28,7 +49,7 @@ public class SaveHandler {
 
     public static void loadGame(GamePanel gamePanel, String saveFilePath) {
         try {
-            GameData gameData = objectMapper.readValue(new File(saveFilePath), GameData.class);
+            GameData gameData = GameData.loadFromFile(saveFilePath);
             gamePanel.initializeFromData(gameData);
         } catch (IOException e) {
             e.printStackTrace();

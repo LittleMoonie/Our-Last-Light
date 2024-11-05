@@ -30,7 +30,7 @@ public class MainMenu extends JFrame implements ActionListener {
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBackground(Config.MAIN_BACKGROUND_COLOR);
 
-        JLabel titleLabel = new JLabel("Don't Starve Alone", SwingConstants.CENTER);
+        JLabel titleLabel = new JLabel("Our Last Light", SwingConstants.CENTER);
         titleLabel.setFont(Config.TITLE_FONT);
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -112,12 +112,18 @@ public class MainMenu extends JFrame implements ActionListener {
             currentGamePanel.stopGameThread(); // Stop the previous game thread if switching games
         }
 
-        GamePanel gamePanel = new GamePanel(playerName, isHost, saveFilePath, this);
-        this.currentGamePanel = gamePanel;
-        setContentPane(gamePanel);
+        // Initialize GamePanel with the necessary data for ECS
+        currentGamePanel = new GamePanel(playerName, isHost, saveFilePath, this);
+
+        // Set up the game panel as the content pane and start the game thread
+        setContentPane(currentGamePanel);
         revalidate();
         repaint();
-        gamePanel.startGameThread();
+        currentGamePanel.startGameThread();
+    }
+
+    public GamePanel getCurrentGamePanel() {
+        return currentGamePanel;
     }
 
     @Override

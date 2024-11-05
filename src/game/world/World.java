@@ -1,6 +1,9 @@
+// src/game/world/World.java
 package src.game.world;
 
 import src.game.constants.Config;
+import src.game.components.PositionComponent;
+import src.game.entities.Entity;
 
 import java.awt.*;
 import java.util.HashSet;
@@ -14,7 +17,7 @@ public class World {
 
     public World(long seed) {
         this.worldSeed = seed;
-        tileProvider = new TileProvider(seed);
+        this.tileProvider = new TileProvider(seed);
     }
 
     public Tile getTileAt(int x, int y, boolean immediate) {
@@ -27,6 +30,10 @@ public class World {
 
     public long getWorldSeed() {
         return worldSeed;
+    }
+
+    public String getWorldName() {
+        return "World_" + worldSeed;
     }
 
     public Set<Long> findLargestLandmass(int centerX, int centerY, int radius) {

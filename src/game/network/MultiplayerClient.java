@@ -1,8 +1,10 @@
 package src.game.network;
 
-import src.game.entities.Player;
 import src.main.GamePanel;
 import src.game.constants.Config;
+import src.game.entities.Entity;
+import src.game.components.PositionComponent;
+import src.game.components.PlayerComponent;
 
 import javax.swing.*;
 import java.io.*;
@@ -18,17 +20,25 @@ public class MultiplayerClient {
     private GamePanel gamePanel;
     private String playerName;
 
-    private ConcurrentHashMap<String, Player> otherPlayers = new ConcurrentHashMap<>();
+    // Map to store other players as entities with PositionComponents
+    private ConcurrentHashMap<String, Entity> otherPlayers = new ConcurrentHashMap<>();
 
     public MultiplayerClient(String serverAddress, GamePanel gamePanel) {
         this.gamePanel = gamePanel;
-        this.playerName = gamePanel.getPlayer().name;
+        Entity playerEntity = gamePanel.getPlayerEntity(); // Assuming GamePanel holds a player entity
+        PlayerComponent playerComponent = playerEntity.getComponent(PlayerComponent.class);
+        PositionComponent positionComponent = playerEntity.getComponent(PositionComponent.class);
+
+        if (playerComponent != null) {
+            this.playerName = playerComponent.name;
+        }
 
         try {
             socket = new Socket(serverAddress, Config.SERVER_PORT);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
 
+            // Send player name to server
             out.println(playerName);
 
             String response = in.readLine();
@@ -53,7 +63,7 @@ public class MultiplayerClient {
                     String name = parts[0];
                     int x = Integer.parseInt(parts[1]);
                     int y = Integer.parseInt(parts[2]);
-                    updateOtherPlayer(name, x, y);
+                    updateOtherPlayerPosition(name, x, y);
                 }
             }
         } catch (IOException e) {
@@ -61,23 +71,41 @@ public class MultiplayerClient {
         }
     }
 
-    private void updateOtherPlayer(String playerName, int x, int y) {
+    private void updateOtherPlayerPosition(String playerName, int x, int y) {
+        // Ignore updates for the current player
         if (!playerName.equals(this.playerName)) {
-            Player otherPlayer = otherPlayers.get(playerName);
+            Entity otherPlayer = otherPlayers.get(playerName);
             if (otherPlayer == null) {
-                otherPlayer = new Player(null, playerName);
+                otherPlayer = createOtherPlayerEntity(playerName);
                 otherPlayers.put(playerName, otherPlayer);
             }
-            otherPlayer.x = x;
-            otherPlayer.y = y;
+
+            // Update position of the other player
+            PositionComponent position = otherPlayer.getComponent(PositionComponent.class);
+            if (position != null) {
+                position.x = x;
+                position.y = y;
+            }
         }
     }
 
-    public void sendPlayerPosition(Player player) {
-        out.println("POSITION:" + player.x + "," + player.y);
+    private Entity createOtherPlayerEntity(String playerName) {
+        // Create a new entity with a PlayerComponent and PositionComponent for a multiplayer player
+        Entity otherPlayer = new Entity();
+        otherPlayer.addComponent(new PlayerComponent(playerName));
+        otherPlayer.addComponent(new PositionComponent(0, 0)); // Initial position, will be updated by server
+
+        return otherPlayer;
     }
 
-    public ConcurrentHashMap<String, Player> getOtherPlayers() {
+    public void sendPlayerPosition(Entity playerEntity) {
+        PositionComponent position = playerEntity.getComponent(PositionComponent.class);
+        if (position != null) {
+            out.println("POSITION:" + position.x + "," + position.y);
+        }
+    }
+
+    public ConcurrentHashMap<String, Entity> getOtherPlayers() {
         return otherPlayers;
     }
 
@@ -94,7 +122,8 @@ public class MultiplayerClient {
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.setBroadcast(true);
             byte[] requestData = "DISCOVER_SERVER".getBytes();
-            DatagramPacket requestPacket = new DatagramPacket(requestData, requestData.length, InetAddress.getByName("255.255.255.255"), Config.DISCOVERY_PORT);
+            DatagramPacket requestPacket = new DatagramPacket(
+                    requestData, requestData.length, InetAddress.getByName("255.255.255.255"), Config.DISCOVERY_PORT);
             socket.send(requestPacket);
 
             socket.setSoTimeout(2000);

@@ -9,7 +9,7 @@ import java.awt.*;
 public class GameWindow extends JFrame {
 
     public GameWindow(GamePanel gamePanel) {
-        setTitle("Don't Starve Alone");
+        setTitle("Our Last Light");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setUndecorated(true);
 

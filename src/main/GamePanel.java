@@ -1,123 +1,166 @@
 package src.main;
 
-import javax.imageio.ImageIO;
+import src.game.components.*;
+import src.game.components.stats.*;
+import src.game.constants.Config;
+import src.game.data.GameData;
+import src.game.entities.PlayerEntity;
+import src.game.entities.Entity;
+import src.game.network.MultiplayerClient;
+import src.game.network.MultiplayerServer;
+import src.game.systems.*;
+import src.game.systems.stats.*;
+import src.game.world.World;
+import src.game.ui.menus.MainMenu;
+import src.game.ui.GameWindow;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
-
-import com.sun.tools.javac.Main;
-import src.game.constants.Config;
-import src.game.constants.GameConstants;
-import src.game.data.GameData;
-import src.game.data.SaveHandler;
-import src.game.entities.Player;
-import src.game.network.MultiplayerClient;
-import src.game.network.MultiplayerServer;
-import src.game.ui.GameWindow;
-import src.game.ui.Minimap;
-import src.game.ui.menus.InGameMenu;
-import src.game.ui.menus.MainMenu;
-import src.game.world.World;
+import java.lang.System;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 public class GamePanel extends JPanel implements Runnable, KeyListener {
-    private final int TILE_SIZE = Config.TILE_SIZE;
-    private int SCREEN_WIDTH;
-    private int SCREEN_HEIGHT;
-
-    private long gameTime = 0;
-    private Thread gameThread;
-    private Player player;
+    private PlayerEntity playerEntity;
     private World world;
-    private Minimap minimap;
-    private BufferedImage loadingIndicator;
+    private List<Entity> entities; // List of all entities in the game
 
-    private String playerName;
-    private boolean isNewGame;
-    private String saveFilePath;
+    // Game systems
+    private InputSystem inputSystem;
+    private MovementSystem movementSystem;
+    private InventorySystem inventorySystem;
+    private MinimapSystem minimapSystem;
+    private HealthSystem healthSystem;
+    private HungerSystem hungerSystem;
+    private ThirstSystem thirstSystem;
+    private StaminaSystem staminaSystem;
+    private SanitySystem sanitySystem;
 
-    private JFrame gameWindow;
+    private Thread gameThread;
     private MultiplayerServer server;
     private MultiplayerClient client;
-    private ConcurrentHashMap<String, Player> otherPlayers = new ConcurrentHashMap<>();
-    private boolean isMultiplayer = false;
-    private final MainMenu mainMenu;
+    private long gameTime;
+    private String saveFilePath;
+    private GameWindow gameWindow;
 
     public GamePanel(String playerName, boolean isHost, String saveFilePath, MainMenu mainMenu) {
-        this.playerName = playerName;
-        this.isNewGame = isHost;
-        this.saveFilePath = saveFilePath;
-        this.mainMenu = mainMenu;
-        initializeGame(isHost);
-    }
+        // Initialize entities and systems
+        entities = new ArrayList<>();
+        world = new World(System.currentTimeMillis());
+        inputSystem = new InputSystem();
+        movementSystem = new MovementSystem(world);
+        inventorySystem = new InventorySystem();
+        minimapSystem = new MinimapSystem(world, (int) Config.MINIMAP_UPDATE_INTERVAL);
+        healthSystem = new HealthSystem();
+        hungerSystem = new HungerSystem();
+        thirstSystem = new ThirstSystem();
+        staminaSystem = new StaminaSystem();
+        sanitySystem = new SanitySystem();
 
-    private void initializeGame(boolean isHost) {
-        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        SCREEN_WIDTH = (int) screenSize.getWidth();
-        SCREEN_HEIGHT = (int) screenSize.getHeight();
-        setPreferredSize(new Dimension(SCREEN_WIDTH, SCREEN_HEIGHT));
+        // Create the player entity and add it to entities list
+        playerEntity = new PlayerEntity(playerName, 100, 100);
+        entities.add(playerEntity);
+
+        setPreferredSize(new Dimension(Config.FRAME_SIZE.width, Config.FRAME_SIZE.height));
         setBackground(Config.MAIN_BACKGROUND_COLOR);
         setDoubleBuffered(true);
         addKeyListener(this);
         setFocusable(true);
+    }
 
-        if (isHost) {
-            if (!isNewGame && saveFilePath != null) {
-                SaveHandler.loadGame(this, saveFilePath);
-            } else {
-                world = new World(System.currentTimeMillis());
-                player = new Player(world, playerName);
-                minimap = new Minimap(world, player);
+    public void initializeFromData(GameData gameData) {
+        for (Map.Entry<String, GameData.PlayerData> entry : gameData.players.entrySet()) {
+            String playerName = entry.getKey();
+            GameData.PlayerData playerData = entry.getValue();
+
+            Entity playerEntity = getOrCreatePlayerEntity(playerName);
+
+            PositionComponent position = playerEntity.getComponent(PositionComponent.class);
+            position.setX(playerData.playerX);
+            position.setY(playerData.playerY);
+
+            InventoryComponent inventory = playerEntity.getComponent(InventoryComponent.class);
+            inventory.setItems(playerData.inventory);
+
+            HealthComponent health = playerEntity.getComponent(HealthComponent.class);
+            health.setHealth(playerData.health);
+
+            HungerComponent hunger = playerEntity.getComponent(HungerComponent.class);
+            hunger.setHunger(playerData.hunger);
+
+            ThirstComponent thirst = playerEntity.getComponent(ThirstComponent.class);
+            thirst.setThirst(playerData.thirst);
+
+            StaminaComponent stamina = playerEntity.getComponent(StaminaComponent.class);
+            stamina.setStamina(playerData.stamina);
+
+            SanityComponent sanity = playerEntity.getComponent(SanityComponent.class);
+            sanity.setSanity(playerData.sanity);
+        }
+
+        this.gameTime = gameData.gameTime;
+        this.world = new World(gameData.worldSeed);
+    }
+
+    // Method to find a player entity by name
+    public PlayerEntity findPlayerEntityByName(String name) {
+        for (Entity entity : entities) {
+            NameComponent nameComponent = entity.getComponent(NameComponent.class);
+            if (nameComponent != null && nameComponent.getName().equals(name)) {
+                return (PlayerEntity) entity;
             }
-        } else {
-            player = new Player(null, playerName);
         }
-        loadLoadingIndicator();
+        return null;
     }
 
-    private void loadLoadingIndicator() {
-        try {
-            loadingIndicator = ImageIO.read(getClass().getResourceAsStream(Config.LOADING_IMAGE_PATH));
-        } catch (IOException e) {
-            e.printStackTrace();
+    // Helper method to get or create a player entity by name
+    private Entity getOrCreatePlayerEntity(String playerName) {
+        Entity playerEntity = findPlayerEntityByName(playerName);
+        if (playerEntity == null) {
+            playerEntity = new Entity();
+            playerEntity.addComponent(new NameComponent(playerName));
+            playerEntity.addComponent(new PositionComponent(0, 0));  // Default position, adjust as needed
+            playerEntity.addComponent(new InventoryComponent());
+            playerEntity.addComponent(new HealthComponent(100, 100)); // current and max health
+            playerEntity.addComponent(new HungerComponent(100, 100)); // current and max hunger
+            playerEntity.addComponent(new ThirstComponent(100, 100)); // current and max thirst
+            playerEntity.addComponent(new StaminaComponent(100, 100)); // current and max stamina
+            playerEntity.addComponent(new SanityComponent(100, 100)); // current and max sanity
+            entities.add(playerEntity);
         }
+        return playerEntity;
     }
 
-    public void setServer(MultiplayerServer server) {
-        this.server = server;
-        this.isMultiplayer = true;
-    }
-
-    public void setClient(MultiplayerClient client) {
-        this.client = client;
-        this.isMultiplayer = true;
+    public String getWorldName() {
+        return (world != null) ? world.getWorldName() : "UnnamedWorld";
     }
 
     public void setGameWindow(GameWindow gameWindow) {
         this.gameWindow = gameWindow;
     }
 
-    public void initializeFromData(GameData gameData) {
-        // Initialize the player’s position and name from the loaded data
-        player = new Player(world, gameData.playerName);
-        player.x = gameData.playerX;
-        player.y = gameData.playerY;
-
-        // Set other attributes like gameTime and world
-        gameTime = gameData.gameTime;
-        world = new World(gameData.worldSeed);
-        player.inventory.setItems(gameData.inventory);
-
-        // Initialize other components as needed, e.g., minimap
-        minimap = new Minimap(world, player);
+    public Entity getPlayerEntity() {
+        return playerEntity;
     }
 
+    // Get the current game time
+    public long getGameTime() {
+        return gameTime;
+    }
 
-    public Player getPlayer() {
-        return player;
+    // Get the world instance
+    public World getWorld() {
+        return world;
+    }
+
+    // Get player entities (assuming you have a list or collection of entities)
+    public List<Entity> getPlayerEntities() {
+        // If `playerEntity` is a single entity, wrap it in a list and return it
+        return Collections.singletonList(playerEntity);
     }
 
     public void startGameThread() {
@@ -125,13 +168,13 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
         gameThread.start();
     }
 
-    public void showInGameMenu() {
-        mainMenu.showInGameMenu(this);  // Call showInGameMenu on MainMenu
+    public void stopGameThread() {
+        gameThread = null;
     }
 
     @Override
     public void run() {
-        double drawInterval = 1000000000 / 60.0;
+        double drawInterval = 1_000_000_000 / 60.0;
         double delta = 0;
         long lastTime = System.nanoTime();
         long currentTime;
@@ -156,21 +199,15 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
     }
 
     private void update() {
-        player.update();
-        minimap.update();
-        gameTime += 1;
-
-        if (isMultiplayer && server != null) {
-            server.broadcastPlayerPosition(player.name, player.x, player.y);
-        }
-
-        if (isMultiplayer && client != null) {
-            client.sendPlayerPosition(player);
-        }
-    }
-
-    public void stopGameThread() {
-        gameThread = null;
+        inputSystem.update(playerEntity, 1.0f);
+        movementSystem.update(playerEntity, 1.0f);
+        inventorySystem.update(playerEntity, 1.0f);
+        minimapSystem.update(playerEntity, 1.0f);
+        healthSystem.update(playerEntity, 1.0f);
+        hungerSystem.update(playerEntity, 1.0f);
+        thirstSystem.update(playerEntity, 1.0f);
+        staminaSystem.update(playerEntity, 1.0f);
+        sanitySystem.update(playerEntity, 1.0f);
     }
 
     @Override
@@ -178,68 +215,40 @@ public class GamePanel extends JPanel implements Runnable, KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-            showInGameMenu();
-        }
-        if (e.getKeyCode() == KeyEvent.VK_M) {
-            minimap.toggleExpanded();
-        }
-        if (e.getKeyCode() == KeyEvent.VK_E) {
-            player.collecting = true; // Activate collecting when pressing 'E'
-        }
-        player.keyPressed(e);
+        inputSystem.keyPressed(playerEntity, e);
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-        player.keyReleased(e);
-    }
-
-
-    public long getGameTime() {
-        return gameTime;
-    }
-
-    public World getWorld() {
-        return world;
-    }
-
-    public String getWorldName() {
-        return world != null ? "World_" + world.getWorldSeed() : "UnnamedWorld";
-    }
-
-    public void saveGame(String filePath) {
-        SaveHandler.saveGame(this, filePath);
+        inputSystem.keyReleased(playerEntity, e);
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-
         Graphics2D g2 = (Graphics2D) g;
 
-        if (world != null && player != null) {
-            // Center the camera on the player
-            int cameraX = player.x - SCREEN_WIDTH / 2;
-            int cameraY = player.y - SCREEN_HEIGHT / 2;
+        if (world != null && playerEntity != null) {
+            PositionComponent position = playerEntity.getComponent(PositionComponent.class);
+            int cameraX = position.getX() - getWidth() / 2;
+            int cameraY = position.getY() - getHeight() / 2;
 
-            // Render the world centered around the player
-            world.render(g2, cameraX, cameraY, SCREEN_WIDTH, SCREEN_HEIGHT);
-
-            // Render the player at the center of the screen using PLAYER_SIZE constant
-            g2.drawImage(player.getImage(), SCREEN_WIDTH / 2 - Config.PLAYER_SIZE / 2, SCREEN_HEIGHT / 2 - Config.PLAYER_SIZE / 2, Config.PLAYER_SIZE, Config.PLAYER_SIZE, null);
-
-            // Draw minimap on the right side
-            if (minimap != null) {
-                minimap.draw(g2);
-            }
-
-            // Draw inventory on the left side
-            if (player.inventory != null) {
-                player.inventory.draw(g2, 20);
-            }
+            world.render(g2, cameraX, cameraY, getWidth(), getHeight());
         } else {
             g.drawString("Loading...", getWidth() / 2, getHeight() / 2);
         }
+    }
+
+    public void setServer(MultiplayerServer server) {
+        this.server = server;
+    }
+
+    public void setClient(MultiplayerClient client) {
+        this.client = client;
+    }
+
+    public void saveGame(String saveFilePath) {
+        this.saveFilePath = saveFilePath;
+        System.out.println("Game saved to: " + saveFilePath);
     }
 }
