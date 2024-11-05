@@ -3,7 +3,6 @@ package src.game.entities;
 import src.game.components.*;
 import src.game.components.stats.*;
 import src.game.constants.Config;
-import src.game.constants.GameConstants;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;

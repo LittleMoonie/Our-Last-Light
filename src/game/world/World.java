@@ -78,7 +78,7 @@ public class World {
             }
             visited.add(key);
 
-            Tile tile = getTileAt(cx * Config.TILE_SIZE, cy * Config.TILE_SIZE, true);
+            Tile tile = getTileAt(cx * Config.TILE_WIDTH, cy * Config.TILE_WIDTH, true);
 
             if (tile != null && !tile.type.equals("water") && !tile.isObstacle) {
                 landmass.add(key);
@@ -91,24 +91,36 @@ public class World {
         }
     }
 
-    public void render(Graphics2D g2, int cameraX, int cameraY, int screenWidth, int screenHeight) {
-        int tilesAcross = screenWidth / Config.TILE_SIZE + 2;
-        int tilesDown = screenHeight / Config.TILE_SIZE + 2;
+    public Point toIsometric(int x, int y) {
+        int isoX = (x - y) * Config.TILE_WIDTH / 2;
+        int isoY = (x + y) * Config.TILE_WIDTH / 4;
+        return new Point(isoX, isoY);
+    }
 
-        int startTileX = cameraX / Config.TILE_SIZE;
-        int startTileY = cameraY / Config.TILE_SIZE;
+
+    public void render(Graphics2D g2, int cameraX, int cameraY, int screenWidth, int screenHeight) {
+        int tilesAcross = screenWidth / Config.TILE_WIDTH + 2;
+        int tilesDown = screenHeight / Config.TILE_WIDTH + 2;
+
+        int startTileX = cameraX / Config.TILE_WIDTH;
+        int startTileY = cameraY / Config.TILE_WIDTH;
 
         for (int x = startTileX; x < startTileX + tilesAcross; x++) {
             for (int y = startTileY; y < startTileY + tilesDown; y++) {
-                Tile tile = getTileAt(x * Config.TILE_SIZE, y * Config.TILE_SIZE, false);
+                Tile tile = getTileAt(x * Config.TILE_WIDTH, y * Config.TILE_WIDTH, false);
                 if (tile != null) {
-                    int screenX = (x * Config.TILE_SIZE) - cameraX;
-                    int screenY = (y * Config.TILE_SIZE) - cameraY;
-                    g2.drawImage(tile.getImage(), screenX, screenY, Config.TILE_SIZE, Config.TILE_SIZE, null);
+                    // Convert Cartesian coordinates to isometric
+                    Point isoPoint = toIsometric(x, y);
+                    int screenX = isoPoint.x - cameraX;
+                    int screenY = isoPoint.y - cameraY;
+
+                    // Draw the tile in the isometric position
+                    g2.drawImage(tile.getImage(), screenX, screenY, Config.TILE_WIDTH, Config.TILE_WIDTH / 2, null);
                 }
             }
         }
     }
+
 
     private long generateKey(int x, int y) {
         return ((long) x << 32) | (y & 0xffffffffL);

@@ -2,7 +2,7 @@ package src.game.systems;
 
 import src.game.components.PositionComponent;
 import src.game.components.MinimapComponent;
-import src.game.constants.GameConstants;
+import src.game.constants.Config;
 import src.game.entities.Entity;
 import src.game.world.Tile;
 import src.game.world.World;
@@ -63,7 +63,7 @@ public class MinimapSystem extends System {
     private void redrawMinimap(PositionComponent position, boolean isExpanded) {
         Graphics2D g = minimapImage.createGraphics();
         float scale = isExpanded ? 0.75f : 1.0f;
-        int tileSize = (int) (GameConstants.TILE_SIZE * scale);
+        int tileSize = (int) (Config.TILE_WIDTH * scale);
 
         int centerX = position.x;
         int centerY = position.y;

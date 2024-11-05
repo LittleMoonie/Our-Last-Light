@@ -1,9 +1,6 @@
 package src.game.constants;
 
-import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.IOException;
 
 public class Config {
     // Paths
@@ -13,7 +10,11 @@ public class Config {
     public static final String LOADING_IMAGE_PATH = "/resources/loading.png";
 
     // Game Dimensions
-    public static final int TILE_SIZE = GameConstants.TILE_SIZE;
+    public static final int TILE_WIDTH = 32;  // Width of the tile (horizontal size)
+    public static final int TILE_HEIGHT = 16; // Height of the tile (vertical size in isometric view)
+
+    public static final int MAP_WIDTH = 5000;
+    public static final int MAP_HEIGHT = 5000;
     public static final Dimension FRAME_SIZE = new Dimension(800, 600);
 
     // UI Configurations
@@ -34,28 +35,17 @@ public class Config {
     public static final String WORLD_EXISTS_MESSAGE = "A world with this name already exists. Please choose a different name.";
     public static final String CREATE_WORLD_ERROR_MESSAGE = "An error occurred while creating the world.";
 
-    // Other Constants
+    // Minimap Configuration
     public static final long MINIMAP_UPDATE_INTERVAL = 500L;
-    public static final int MAX_SPAWN_ATTEMPTS = 1000;
-    public static final int PLAYER_SIZE = 28;
-    public static final double SIMPLEX_NOISE_SCALE_BASE = 0.005;
-    public static final double SIMPLEX_NOISE_SCALE_DETAIL = 0.05;
-    public static final double NOISE_THRESHOLD_GRASS = 0.3;
-    public static final double NOISE_THRESHOLD_FOREST = 0.1;
-    public static final double NOISE_THRESHOLD_SAND = -0.05;
-    public static final double OBSTACLE_PROBABILITY_FOREST = 0.1;
+
+    // Multiplayer Configuration
     public static final int SERVER_PORT = 5000;
     public static final int DISCOVERY_PORT = 5001;
+    public static final int MAX_SPAWN_ATTEMPTS = 1000;
 
-    // Images
-    public static BufferedImage PLAYER_IMAGE;
+    // Player Configurations
+    public static final int PLAYER_SIZE = 28;
 
-    static {
-        try {
-            PLAYER_IMAGE = ImageIO.read(Config.class.getResourceAsStream(PLAYER_IMAGE_PATH));
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.err.println("Error loading player image from path: " + PLAYER_IMAGE_PATH);
-        }
-    }
+    // Other Constants
+    public static final double OBSTACLE_PROBABILITY_FOREST = 0.1;
 }

@@ -1,13 +1,14 @@
 package src.game.world;
 
 import src.game.constants.Config;
+import src.game.constants.WorldConfig;
 import src.game.bin.LRUCache;
 
 import java.util.concurrent.*;
 import java.util.*;
 
 public class TileProvider {
-    private static final int TILE_SIZE = Config.TILE_SIZE;
+    private static final int TILE_WIDTH = Config.TILE_WIDTH;
     private static final int MAX_CACHE_SIZE = 10000;
 
     private Map<Long, Tile> tileMap;
@@ -29,8 +30,8 @@ public class TileProvider {
     }
 
     public Tile getTileAt(int x, int y, boolean immediate) {
-        int tileX = x / TILE_SIZE;
-        int tileY = y / TILE_SIZE;
+        int tileX = x / TILE_WIDTH;
+        int tileY = y / TILE_WIDTH;
         long key = generateKey(tileX, tileY);
 
         Tile tile = tileMap.get(key);
@@ -62,31 +63,50 @@ public class TileProvider {
     private Tile generateTile(int x, int y) {
         long key = generateKey(x, y);
 
-        Double noiseValue = noiseCache.get(key);
-        if (noiseValue == null) {
-            double baseNoise = noiseGenerator.noise(x * Config.SIMPLEX_NOISE_SCALE_BASE, y * Config.SIMPLEX_NOISE_SCALE_BASE);
-            double detailNoise = noiseGenerator.noise(x * Config.SIMPLEX_NOISE_SCALE_DETAIL, y * Config.SIMPLEX_NOISE_SCALE_DETAIL) * 0.2;
-            noiseValue = baseNoise + detailNoise;
-            noiseCache.put(key, noiseValue);
-        }
+        // Calculate distance from the center to create an island shape
+        double distanceFromCenter = Math.sqrt(x * x + y * y);
+        double islandEffect = Math.max(0, WorldConfig.ISLAND_RADIUS - distanceFromCenter) / WorldConfig.ISLAND_RADIUS;
+
+        // Use Simplex noise to add variety but blend it with the island effect
+        double noiseValue = (noiseGenerator.noise(x * WorldConfig.SIMPLEX_NOISE_SCALE_BASE, y * WorldConfig.SIMPLEX_NOISE_SCALE_BASE) * 0.5 + 0.5) * islandEffect;
 
         Tile tile;
-        if (noiseValue > Config.NOISE_THRESHOLD_GRASS) {
+        if (noiseValue > WorldConfig.NOISE_THRESHOLD_GRASS) {
             tile = new Tile("grass");
-        } else if (noiseValue > Config.NOISE_THRESHOLD_FOREST) {
+        } else if (noiseValue > WorldConfig.NOISE_THRESHOLD_FOREST) {
             tile = new Tile("forest");
-        } else if (noiseValue > Config.NOISE_THRESHOLD_SAND) {
+        } else if (noiseValue > WorldConfig.NOISE_THRESHOLD_SAND) {
             tile = new Tile("sand");
         } else {
             tile = new Tile("water");
         }
 
-        if (tile.type.equals("forest") && Math.random() < Config.OBSTACLE_PROBABILITY_FOREST) {
-            tile.isObstacle = true;
+        if (tile.type.equals("grass") || tile.type.equals("sand")) {
+            double detailNoise = noiseGenerator.noise(x * WorldConfig.SIMPLEX_NOISE_SCALE_DETAIL, y * WorldConfig.SIMPLEX_NOISE_SCALE_DETAIL);
+            if (detailNoise < WorldConfig.RIVER_THRESHOLD) {
+                tile = new Tile("river");
+            } else if (detailNoise < WorldConfig.LAKE_THRESHOLD) {
+                tile = new Tile("lake");
+            }
         }
 
         return tile;
     }
+
+    // Helper method to generate biome-specific tile types
+    private Tile generateBiomeTile(int x, int y, String biome) {
+        switch (biome) {
+            case "prairie":
+                return new Tile("grass");
+            case "desert":
+                return new Tile("sand");
+            case "forest":
+                return new Tile("forest");
+            default:
+                return new Tile("grass");
+        }
+    }
+
 
     public void shutdown() {
         executor.shutdown();
