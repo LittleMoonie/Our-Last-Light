@@ -10,8 +10,9 @@ public class Config {
     public static final String LOADING_IMAGE_PATH = "/resources/loading.png";
 
     // Game Dimensions
-    public static final int TILE_WIDTH = 32;  // Width of the tile (horizontal size)
-    public static final int TILE_HEIGHT = 16; // Height of the tile (vertical size in isometric view)
+// Config.java
+    public static final int TILE_WIDTH = 64;  // Adjust to match your tile image width
+    public static final int TILE_HEIGHT = 32; // Adjust to match your tile image height
 
     public static final int MAP_WIDTH = 5000;
     public static final int MAP_HEIGHT = 5000;

@@ -12,7 +12,6 @@ public class MovementSystem extends System {
     public MovementSystem(World world) {
         this.world = world;
     }
-
     @Override
     public void update(Entity entity, float deltaTime) {
         PositionComponent position = entity.getComponent(PositionComponent.class);

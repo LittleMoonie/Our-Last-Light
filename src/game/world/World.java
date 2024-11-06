@@ -1,128 +1,111 @@
-// src/game/world/World.java
 package src.game.world;
-
-import src.game.constants.Config;
-import src.game.components.PositionComponent;
-import src.game.constants.WorldConfig;
-import src.game.entities.Entity;
 
 import java.awt.*;
 import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Set;
 
+import src.game.constants.Config;
+import src.game.constants.WorldConfig;
+import src.game.world.Tile;
+import src.game.world.TileProvider;
+
 public class World {
+    private int chunksGenerated;
+    private Set<Point> loadedChunks;
+    private int totalChunks;
     private TileProvider tileProvider;
-    private long worldSeed;
 
     public World(long seed) {
-        this.worldSeed = seed;
-        this.tileProvider = new TileProvider(seed);
+        tileProvider = new TileProvider(seed);
+        loadedChunks = new HashSet<>();
+        int chunksInWidth = WorldConfig.WORLD_WIDTH / (WorldConfig.CHUNK_SIZE * Config.TILE_WIDTH);
+        int chunksInHeight = WorldConfig.WORLD_HEIGHT / (WorldConfig.CHUNK_SIZE * Config.TILE_HEIGHT);
+        totalChunks = chunksInWidth * chunksInHeight;
+        chunksGenerated = 0;
     }
 
-    public Tile getTileAt(int x, int y, boolean immediate) {
-        return tileProvider.getTileAt(x, y, immediate);
-    }
+    public void generateNextChunk() {
+        int centerX = WorldConfig.WORLD_WIDTH / 2;
+        int centerY = WorldConfig.WORLD_HEIGHT / 2;
 
-    public boolean isLoadingTiles() {
-        return tileProvider.isLoadingTiles();
-    }
+        // Calculate next chunk coordinates in a spiral pattern around the center
+        Point nextChunkCoords = getNextChunkCoords();
+        if (nextChunkCoords != null) {
+            int chunkX = nextChunkCoords.x;
+            int chunkY = nextChunkCoords.y;
 
-    public long getWorldSeed() {
-        return worldSeed;
-    }
-
-    public String getWorldName() {
-        return "World_" + worldSeed;
-    }
-
-    public Set<Long> findLargestLandmass(int centerX, int centerY, int radius) {
-        Set<Long> visited = new HashSet<>();
-        Set<Long> largestLandmass = new HashSet<>();
-
-        int startX = centerX - radius;
-        int endX = centerX + radius;
-        int startY = centerY - radius;
-        int endY = centerY + radius;
-
-        for (int x = startX; x <= endX; x++) {
-            for (int y = startY; y <= endY; y++) {
-                long key = generateKey(x, y);
-
-                if (!visited.contains(key)) {
-                    Set<Long> currentLandmass = new HashSet<>();
-                    exploreLandmass(x, y, visited, currentLandmass);
-
-                    if (currentLandmass.size() > largestLandmass.size()) {
-                        largestLandmass = currentLandmass;
-                    }
+            // Generate all tiles within this chunk
+            for (int x = chunkX * WorldConfig.CHUNK_SIZE; x < (chunkX + 1) * WorldConfig.CHUNK_SIZE; x++) {
+                for (int y = chunkY * WorldConfig.CHUNK_SIZE; y < (chunkY + 1) * WorldConfig.CHUNK_SIZE; y++) {
+                    tileProvider.getTileAt(x * Config.TILE_WIDTH, y * Config.TILE_HEIGHT, true);
                 }
             }
-        }
 
-        return largestLandmass;
-    }
-
-    private void exploreLandmass(int x, int y, Set<Long> visited, Set<Long> landmass) {
-        Queue<int[]> queue = new LinkedList<>();
-        queue.offer(new int[]{x, y});
-
-        while (!queue.isEmpty()) {
-            int[] coords = queue.poll();
-            int cx = coords[0];
-            int cy = coords[1];
-            long key = generateKey(cx, cy);
-
-            if (visited.contains(key)) {
-                continue;
-            }
-            visited.add(key);
-
-            Tile tile = getTileAt(cx * Config.TILE_WIDTH, cy * Config.TILE_WIDTH, true);
-
-            if (tile != null && !tile.type.equals("water") && !tile.isObstacle) {
-                landmass.add(key);
-
-                queue.offer(new int[]{cx + 1, cy});
-                queue.offer(new int[]{cx - 1, cy});
-                queue.offer(new int[]{cx, cy + 1});
-                queue.offer(new int[]{cx, cy - 1});
-            }
+            loadedChunks.add(nextChunkCoords);
+            chunksGenerated++;
         }
     }
 
-    public Point toIsometric(int x, int y) {
-        int isoX = (x - y) * Config.TILE_WIDTH / 2;
-        int isoY = (x + y) * Config.TILE_WIDTH / 4;
-        return new Point(isoX, isoY);
+    private Point getNextChunkCoords() {
+        int centerX = WorldConfig.WORLD_WIDTH / (2 * WorldConfig.CHUNK_SIZE);
+        int centerY = WorldConfig.WORLD_HEIGHT / (2 * WorldConfig.CHUNK_SIZE);
+
+        int layer = 0;
+        int dx = 0, dy = -1;
+        int x = centerX, y = centerY;
+
+        for (int i = 0; i < totalChunks; i++) {
+            if (x >= 0 && x < centerX * 2 && y >= 0 && y < centerY * 2) {
+                Point nextChunk = new Point(x, y);
+                if (!loadedChunks.contains(nextChunk)) {
+                    return nextChunk;
+                }
+            }
+
+            if (x == layer && y == -layer) {
+                layer++;
+                dx = 1;
+                dy = 0;
+            } else if (x == layer && y == layer) {
+                dx = 0;
+                dy = 1;
+            } else if (x == -layer && y == layer) {
+                dx = -1;
+                dy = 0;
+            } else if (x == -layer && y == -layer) {
+                dx = 0;
+                dy = -1;
+            }
+
+            x += dx;
+            y += dy;
+        }
+        return null; // All chunks have been generated
     }
 
-    public void render(Graphics2D g2, int cameraX, int cameraY, int screenWidth, int screenHeight) {
-        int tilesAcross = screenWidth / Config.TILE_WIDTH + 2; // +2 for buffer on the sides
-        int tilesDown = screenHeight / Config.TILE_HEIGHT + 2; // +2 for buffer on top and bottom
+    public double getGenerationProgress() {
+        return (double) chunksGenerated / totalChunks;
+    }
+    public void render(Graphics2D g2, int screenWidth, int screenHeight) {
+        int tileSize = Config.TILE_WIDTH; // Assuming square tiles
+        int centerX = WorldConfig.WORLD_WIDTH / 2;
+        int centerY = WorldConfig.WORLD_HEIGHT / 2;
 
-        // Determine the starting tile position based on camera position
-        int startTileX = cameraX / Config.TILE_WIDTH;
-        int startTileY = cameraY / Config.TILE_HEIGHT;
+        // Calculate the visible range
+        int visibleTilesX = screenWidth / tileSize;
+        int visibleTilesY = screenHeight / tileSize;
 
-        // Render the tiles that fit within the screen
-        for (int x = startTileX; x < startTileX + tilesAcross; x++) {
-            for (int y = startTileY; y < startTileY + tilesDown; y++) {
-                Tile tile = getTileAt(x * Config.TILE_WIDTH, y * Config.TILE_HEIGHT, false);
+        // Render only visible tiles within chunks
+        for (int x = centerX - visibleTilesX / 2; x < centerX + visibleTilesX / 2; x++) {
+            for (int y = centerY - visibleTilesY / 2; y < centerY + visibleTilesY / 2; y++) {
+                Tile tile = tileProvider.getTileAt(x * tileSize, y * tileSize, true);
                 if (tile != null) {
-                    // Adjust screenX and screenY for isometric rendering
-                    int screenX = (x - y) * (Config.TILE_WIDTH / 2) + (screenWidth / 2) - cameraX;
-                    int screenY = (x + y) * (Config.TILE_HEIGHT / 2) - cameraY;
-
-                    // Draw the tile image
-                    g2.drawImage(tile.getImage(), screenX, screenY, null);
+                    // Calculate the screen position for each tile
+                    int screenX = (x - centerX) * tileSize + screenWidth / 2;
+                    int screenY = (y - centerY) * tileSize + screenHeight / 2;
+                    g2.drawImage(tile.getImage(), screenX, screenY, tileSize, tileSize, null);
                 }
             }
         }
-    }
-
-    private long generateKey(int x, int y) {
-        return ((long) x << 32) | (y & 0xffffffffL);
     }
 }
