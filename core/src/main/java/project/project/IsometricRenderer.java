@@ -10,8 +10,9 @@ import java.util.Iterator;
 import java.util.Map;
 
 public class IsometricRenderer {
-    public static final int TILE_WIDTH = 64;
-    public static final int TILE_HEIGHT = 32; // Adjusted for isometric tiles
+    public static final int TILE_WIDTH = 32;
+    public static final int TILE_HEIGHT = 16; // Height should be half the width for isometric tiles
+
 
     public Texture grass;
     public Texture water;
@@ -124,7 +125,7 @@ public class IsometricRenderer {
                 int globalY = chunk.startY + y;
 
                 float drawX = (globalX - globalY) * (TILE_WIDTH / 2f);
-                float drawY = (globalX + globalY) * (TILE_HEIGHT / 2f) / 2;
+                float drawY = (globalX + globalY) * (TILE_HEIGHT / 2f);
 
                 Texture tileTexture = getTextureForBiome(chunk.tiles[x][y]);
 
@@ -192,8 +193,8 @@ public class IsometricRenderer {
      * @return A Vector2 representing the tile coordinates.
      */
     private Vector2 worldToIso(float worldX, float worldY) {
-        float tileX = (worldY / TILE_HEIGHT + worldX / TILE_WIDTH);
-        float tileY = (worldY / TILE_HEIGHT - worldX / TILE_WIDTH);
+        float tileX = (worldY / TILE_HEIGHT + worldX / TILE_WIDTH) / 2;
+        float tileY = (worldY / TILE_HEIGHT - worldX / TILE_WIDTH) / 2;
         return new Vector2(tileX, tileY);
     }
 
