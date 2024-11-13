@@ -1,3 +1,4 @@
+// core/src/main/java/project/project/GameScreen.java
 package project.project;
 
 import com.badlogic.gdx.Gdx;
@@ -8,53 +9,70 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 
-public class GameScreen implements Screen {
-    public static final int MAP_WIDTH = 100; // Adjust as needed
-    public static final int MAP_HEIGHT = 100; // Adjust as needed
+import java.util.Random;
 
+public class GameScreen implements Screen {
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private IsometricRenderer renderer;
     private Player player;
+    private Random random;
+    private MapGenerator mapGenerator;
 
     public GameScreen(SpriteBatch batch) {
         this.batch = batch;
-        show(); // Initialize game components
+        this.random = new Random(); // Initialize Random
     }
 
     @Override
     public void show() {
-        // Initialize camera with appropriate viewport size
-        camera = new OrthographicCamera(MAP_WIDTH * IsometricRenderer.TILE_WIDTH / 2f, MAP_HEIGHT * IsometricRenderer.TILE_HEIGHT / 2f);
-        camera.position.set(0, 0, 0); // Initialize at (0, 0)
+
+        // Initialize MapGenerator without worrying about seed generation
+        mapGenerator = new MapGenerator(Constants.MAP_WIDTH, Constants.MAP_HEIGHT);
+
+        // Pass the map generator to the renderer
+        renderer = new IsometricRenderer(mapGenerator);
+
+        // Set up the camera centered at (0, 0) in world coordinates
+        camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        camera.zoom = Constants.INITIAL_ZOOM; // Adjust zoom as needed for larger maps
+
+        // Center the camera at (0, 0) world coordinates initially
+        camera.position.set(0, 0, 0);
         camera.update();
 
-        // Initialize the renderer with map dimensions
-        renderer = new IsometricRenderer(MAP_WIDTH, MAP_HEIGHT);
+        // Spawn the player at the center of the island
+//        Vector2 spawnPosition = findIslandCenterLandTile();
+        player = new Player(tileToWorld(0, 0));
 
-        // Count land tiles
-        byte[][] biomeMap = renderer.getBiomeMap();
-        int landCount = 0;
-        for (int x = 0; x < biomeMap.length; x++) {
-            for (int y = 0; y < biomeMap[0].length; y++) {
-                byte biome = biomeMap[x][y];
-                if (isLandBiome(biome)) {
-                    landCount++;
-                }
-            }
-        }
-        System.out.println("Number of land tiles: " + landCount);
+        // Adjust the camera to center on the player
+        camera.position.set(player.getWorldPosition().x, player.getWorldPosition().y, 0);
+        camera.update();
 
-        // Find a land tile to spawn the player
-        Vector2 startingTilePos = findLandTile();
-        if (startingTilePos != null) {
-            System.out.println("Player starting tile position: " + startingTilePos);
-            player = new Player(startingTilePos);
-        } else {
-            System.out.println("No land tile found. Spawning at default position.");
-            player = new Player(new Vector2(0, 0));
-        }
+        // Pre-load chunks around the spawn position within render distance
+//        renderer.preloadChunks(player.getWorldPosition().x, player.getWorldPosition().y);
     }
+
+//    private Vector2 findIslandCenterLandTile() {
+//        byte[][] biomeMap = renderer.getBiomeMap();
+//        int centerX = biomeMap.length / 2;
+//        int centerY = biomeMap[0].length / 2;
+//        int radius = Math.min(centerX, centerY);
+//
+//        for (int r = 0; r < radius; r++) {
+//            for (int x = centerX - r; x <= centerX + r; x++) {
+//                for (int y = centerY - r; y <= centerY + r; y++) {
+//                    if (x >= 0 && y >= 0 && x < biomeMap.length && y < biomeMap[0].length &&
+//                        isLandBiome(biomeMap[x][y])) {
+//                        return tileToWorld(x - centerX, y - centerY);
+//                    }
+//                }
+//            }
+//        }
+//
+//        System.err.println("Error: Could not find a central land tile.");
+//        return tileToWorld(0, 0); // Fallback
+//    }
 
 
     @Override
@@ -65,7 +83,7 @@ public class GameScreen implements Screen {
 
         // Update player and handle input
         player.update(delta);
-        handleInput();
+        handleInput(delta);
 
         // Make the camera follow the player
         camera.position.set(player.getWorldPosition().x, player.getWorldPosition().y, 0);
@@ -76,29 +94,34 @@ public class GameScreen implements Screen {
 
         // Begin drawing
         batch.begin();
-        renderer.drawGround(batch, player.getWorldPosition().x, player.getWorldPosition().y);
+        renderer.drawGround(batch);
         player.render(batch);
         batch.end();
     }
 
-    private void handleInput() {
+    private void handleInput(float delta) {
+        // Zoom controls
         if (Gdx.input.isKeyPressed(Input.Keys.Z)) {
-            camera.zoom -= 0.002f;
+            camera.zoom -= Constants.ZOOM_SPEED * delta * 60; // Adjust for frame rate
+            camera.zoom = Math.max(Constants.MIN_ZOOM, camera.zoom);
         }
 
         if (Gdx.input.isKeyPressed(Input.Keys.X)) {
-            camera.zoom += 0.002f;
+            camera.zoom += Constants.ZOOM_SPEED * delta * 60; // Adjust for frame rate
+            camera.zoom = Math.min(Constants.MAX_ZOOM, camera.zoom);
         }
 
-        // Remove manual camera movement since the camera follows the player
+        camera.update();
     }
 
     /**
-     * Searches the biome map for a land tile and returns its tile coordinates.
+     * Randomly searches the biome map for a land tile and returns its world coordinates.
      *
-     * @return A Vector2 representing the tile coordinates of a land tile, or null if none found.
+     * @return A Vector2 representing the world coordinates of a land tile, or null if none found.
      */
-    private Vector2 findLandTile() {
+// core/src/main/java/project/project/GameScreen.java
+
+    private Vector2 findRandomLandTile() {
         byte[][] biomeMap = renderer.getBiomeMap();
         int mapWidth = biomeMap.length;
         int mapHeight = biomeMap[0].length;
@@ -106,22 +129,40 @@ public class GameScreen implements Screen {
         int centerX = mapWidth / 2;
         int centerY = mapHeight / 2;
 
-        int maxRadius = Math.max(centerX, centerY);
+        int maxRadius = (int) (Math.min(centerX, centerY) * 0.95); // 95% of half the map size
 
-        for (int radius = 0; radius < maxRadius; radius++) {
-            for (int x = centerX - radius; x <= centerX + radius; x++) {
-                for (int y = centerY - radius; y <= centerY + radius; y++) {
-                    if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
-                        byte biome = biomeMap[x][y];
-                        if (isLandBiome(biome)) {
-                            return new Vector2(x, y);
-                        }
-                    }
-                }
+        // Try up to a certain number of attempts to find a suitable land tile
+        int maxAttempts = 1000; // Define an appropriate attempt limit
+        for (int i = 0; i < maxAttempts; i++) {
+            int x = centerX + (int)(random.nextGaussian() * maxRadius);
+            int y = centerY + (int)(random.nextGaussian() * maxRadius);
+            if (x >= 0 && y >= 0 && x < mapWidth && y < mapHeight && isLandBiome(biomeMap[x][y])) {
+                Vector2 worldPos = tileToWorld(x - centerX, y - centerY);
+                return worldPos;
             }
         }
 
-        return null;
+        // If no land tile found within the max attempts, use center as fallback
+        return tileToWorld(0, 0);
+    }
+
+
+    private Vector2 tileToWorld(int tileX, int tileY) {
+        float worldX = (tileX - tileY) * (Constants.TILE_WIDTH / 2f);
+        float worldY = (tileX + tileY) * (Constants.TILE_HEIGHT / 2f);
+        return new Vector2(worldX, worldY);
+    }
+
+    private Vector2 worldToTile(float worldX, float worldY) {
+        float tileX = (worldY / Constants.TILE_HEIGHT + worldX / Constants.TILE_WIDTH) / 2f;
+        float tileY = (worldY / Constants.TILE_HEIGHT - worldX / Constants.TILE_WIDTH) / 2f;
+        return new Vector2(tileX, tileY);
+    }
+
+    private void testCoordinateTransformations() {
+        Vector2 originalTile = new Vector2(10, 15);
+        Vector2 worldPos = tileToWorld((int) originalTile.x, (int) originalTile.y);
+        Vector2 convertedTile = worldToTile(worldPos.x, worldPos.y);
     }
 
     /**
@@ -131,7 +172,7 @@ public class GameScreen implements Screen {
      * @return True if it's a land biome, false otherwise.
      */
     private boolean isLandBiome(byte biome) {
-        return biome != MapGenerator.Biome.OCEAN.ordinal() && biome != MapGenerator.Biome.BEACH.ordinal();
+        return biome != MapGenerator.Biome.WATER.ordinal();
     }
 
     @Override
@@ -142,7 +183,9 @@ public class GameScreen implements Screen {
 
     @Override
     public void resize(int width, int height) {
-        // Optional: Adjust the viewport or camera if needed
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        camera.update();
     }
 
     @Override

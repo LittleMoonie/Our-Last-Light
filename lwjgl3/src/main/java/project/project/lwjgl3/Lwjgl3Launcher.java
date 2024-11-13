@@ -3,7 +3,7 @@ package project.project.lwjgl3;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import project.project.Isometric;
-import project.project.GameScreen;
+import project.project.Constants;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
@@ -28,7 +28,7 @@ public class Lwjgl3Launcher {
         //// If you remove the above line and set Vsync to false, you can get unlimited FPS, which can be
         //// useful for testing performance, but can also be very stressful to some hardware.
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
-        configuration.setWindowedMode(GameScreen.MAP_WIDTH, GameScreen.MAP_HEIGHT);
+        configuration.setWindowedMode(Constants.MAP_WIDTH, Constants.MAP_HEIGHT);
         return configuration;
     }
 }

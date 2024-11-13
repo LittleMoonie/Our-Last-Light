@@ -3,215 +3,84 @@ package project.project;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Json;
+import com.badlogic.gdx.utils.JsonValue;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 public class IsometricRenderer {
-    public static final int TILE_WIDTH = 32;
-    public static final int TILE_HEIGHT = 16; // Height should be half the width for isometric tiles
+    private static final int TILE_WIDTH = 256;
+    private static final int TILE_HEIGHT = 192;
 
+    private Map<MapGenerator.Biome, ArrayList<TextureRegion>> biomeTileMap;
+    private Texture tileSheet;
+    private byte[][] biomeMap;  // Biome map from MapGenerator
+    private int[][] tileVariants;  // Precomputed tile variants for consistency
 
-    public Texture grass;
-    public Texture water;
-    public Texture sand;
-    public Texture forest;
-    public Texture prairie;
-    public Texture desert;
-    public Texture mountain;
+    public IsometricRenderer(MapGenerator mapGenerator) {
+        this.biomeMap = mapGenerator.getBiomeMap();
+        this.tileVariants = mapGenerator.getTileVariants();
 
-    private MapGenerator mapGenerator;
-    private byte[][] biomeMap;
-
-    // Chunk management
-    private Map<String, TileChunk> loadedChunks = new HashMap<>();
-    private int renderDistance = 5; // Number of chunks to render around the player
-
-    // For tracking player's chunk position to manage loaded chunks
-    private Vector2 lastPlayerChunkPos = new Vector2(-1, -1);
-
-    public IsometricRenderer(int width, int height) {
-        // Load textures
-        grass = new Texture(Gdx.files.internal("grass.png"));
-        water = new Texture(Gdx.files.internal("water.png"));
-        sand = new Texture(Gdx.files.internal("sand.png"));
-        forest = new Texture(Gdx.files.internal("forest.png"));
-        prairie = new Texture(Gdx.files.internal("prairie.png"));
-        desert = new Texture(Gdx.files.internal("desert.png"));
-        mountain = new Texture(Gdx.files.internal("mountain.png"));
-
-        // Generate the map
-        mapGenerator = new MapGenerator(width, height);
-        biomeMap = mapGenerator.getBiomeMap();
+        loadTileConfig();
     }
 
-    /**
-     * Draws the ground tiles around the player's position.
-     *
-     * @param batch    The SpriteBatch used for drawing.
-     * @param playerX  The player's x-coordinate in world space.
-     * @param playerY  The player's y-coordinate in world space.
-     */
-    public void drawGround(SpriteBatch batch, float playerX, float playerY) {
-        // Convert player world position to tile coordinates
-        Vector2 playerTilePos = worldToIso(playerX, playerY);
+    private void loadTileConfig() {
+        Json json = new Json();
+        JsonValue root = json.fromJson(null, Gdx.files.internal("tile_config.json"));
 
-        int playerTileX = (int) playerTilePos.x;
-        int playerTileY = (int) playerTilePos.y;
+        tileSheet = new Texture(Gdx.files.internal("256x192 Tiles.png"));
+        biomeTileMap = new HashMap<>();
 
-        // Convert tile coordinates to chunk coordinates
-        int playerChunkX = playerTileX / TileChunk.CHUNK_SIZE;
-        int playerChunkY = playerTileY / TileChunk.CHUNK_SIZE;
+        for (JsonValue biomeEntry : root) {
+            String biomeName = biomeEntry.name();
+            ArrayList<TextureRegion> tileVariantsList = new ArrayList<>();
 
-        // Remove distant chunks if the player has moved to a new chunk
-        if (lastPlayerChunkPos.x != playerChunkX || lastPlayerChunkPos.y != playerChunkY) {
-            lastPlayerChunkPos.set(playerChunkX, playerChunkY);
-            removeDistantChunks(playerChunkX, playerChunkY);
+            for (JsonValue tileData : biomeEntry) {
+                int x = tileData.getInt("x");
+                int y = tileData.getInt("y");
+                int width = tileData.getInt("width");
+                int height = tileData.getInt("height");
+
+                TextureRegion region = new TextureRegion(tileSheet, x, y, width, height);
+                tileVariantsList.add(region);
+            }
+
+            try {
+                MapGenerator.Biome biomeType = MapGenerator.Biome.valueOf(biomeName);
+                biomeTileMap.put(biomeType, tileVariantsList);
+            } catch (IllegalArgumentException e) {
+                System.err.println("Biome type not recognized: " + biomeName);
+            }
         }
+    }
 
-        // Loop through chunks around the player
-        for (int dx = -renderDistance; dx <= renderDistance; dx++) {
-            for (int dy = -renderDistance; dy <= renderDistance; dy++) {
-                int chunkX = playerChunkX + dx;
-                int chunkY = playerChunkY + dy;
+    public void drawGround(SpriteBatch batch) {
+        for (int row = biomeMap.length - 1; row >= 0; row--) {
+            for (int col = biomeMap[0].length - 1; col >= 0; col--) {
+                float x = (col - row) * (TILE_WIDTH / 2f);
+                float y = (col + row) * (TILE_HEIGHT / 3f);
 
-                String chunkKey = chunkX + "," + chunkY;
-                TileChunk chunk = loadedChunks.get(chunkKey);
+                MapGenerator.Biome biome = MapGenerator.Biome.values()[biomeMap[row][col]];
+                int variantIndex = tileVariants[row][col];
 
-                if (chunk == null) {
-                    chunk = loadChunk(chunkX, chunkY);
-                    if (chunk != null) {
-                        loadedChunks.put(chunkKey, chunk);
-                    }
+                ArrayList<TextureRegion> tileVariantsList = biomeTileMap.get(biome);
+                if (variantIndex >= tileVariantsList.size()) {
+                    variantIndex = 0;  // Fallback to the first variant if out of bounds
                 }
 
-                if (chunk != null) {
-                    drawChunk(batch, chunk);
-                }
+                TextureRegion tileTexture = tileVariantsList.get(variantIndex);
+                batch.draw(tileTexture, x, y, TILE_WIDTH, TILE_HEIGHT);
             }
         }
     }
 
-    /**
-     * Loads a chunk at the specified chunk coordinates.
-     *
-     * @param chunkX The x-coordinate of the chunk.
-     * @param chunkY The y-coordinate of the chunk.
-     * @return The loaded TileChunk, or null if out of bounds.
-     */
-    private TileChunk loadChunk(int chunkX, int chunkY) {
-        int startX = chunkX * TileChunk.CHUNK_SIZE;
-        int startY = chunkY * TileChunk.CHUNK_SIZE;
-
-        if (startX < 0 || startY < 0 || startX >= biomeMap.length || startY >= biomeMap[0].length) {
-            return null; // Out of bounds
-        }
-
-        return new TileChunk(startX, startY, biomeMap);
+    public void dispose() {
+        tileSheet.dispose();
     }
-
-    /**
-     * Draws a chunk of tiles.
-     *
-     * @param batch The SpriteBatch used for drawing.
-     * @param chunk The TileChunk to draw.
-     */
-    private void drawChunk(SpriteBatch batch, TileChunk chunk) {
-        for (int x = 0; x < chunk.tiles.length; x++) {
-            for (int y = 0; y < chunk.tiles[0].length; y++) {
-                int globalX = chunk.startX + x;
-                int globalY = chunk.startY + y;
-
-                float drawX = (globalX - globalY) * (TILE_WIDTH / 2f);
-                float drawY = (globalX + globalY) * (TILE_HEIGHT / 2f);
-
-                Texture tileTexture = getTextureForBiome(chunk.tiles[x][y]);
-
-                batch.draw(tileTexture, drawX, drawY, TILE_WIDTH, TILE_HEIGHT);
-            }
-        }
-    }
-
-    /**
-     * Removes chunks from loadedChunks that are beyond the render distance.
-     *
-     * @param playerChunkX The player's current chunk x-coordinate.
-     * @param playerChunkY The player's current chunk y-coordinate.
-     */
-    private void removeDistantChunks(int playerChunkX, int playerChunkY) {
-        Iterator<Map.Entry<String, TileChunk>> iterator = loadedChunks.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry<String, TileChunk> entry = iterator.next();
-            String key = entry.getKey();
-            String[] coords = key.split(",");
-            int chunkX = Integer.parseInt(coords[0]);
-            int chunkY = Integer.parseInt(coords[1]);
-
-            int dx = Math.abs(chunkX - playerChunkX);
-            int dy = Math.abs(chunkY - playerChunkY);
-
-            if (dx > renderDistance || dy > renderDistance) {
-                iterator.remove(); // Remove chunk from loadedChunks
-            }
-        }
-    }
-
-    /**
-     * Returns the texture associated with a biome.
-     *
-     * @param biome The biome identifier.
-     * @return The corresponding Texture.
-     */
-    private Texture getTextureForBiome(int biome) {
-        switch (biome) {
-            case 0: // OCEAN
-                return water;
-            case 1: // BEACH
-                return sand;
-            case 2: // GRASS
-                return grass;
-            case 3: // FOREST
-                return forest;
-            case 4: // DESERT
-                return desert;
-            case 5: // MOUNTAIN
-                return mountain;
-            case 6: // PRAIRIE
-                return prairie;
-            default:
-                return grass;
-        }
-    }
-
-    /**
-     * Helper method to convert world coordinates to isometric tile coordinates.
-     *
-     * @param worldX The x-coordinate in world space.
-     * @param worldY The y-coordinate in world space.
-     * @return A Vector2 representing the tile coordinates.
-     */
-    private Vector2 worldToIso(float worldX, float worldY) {
-        float tileX = (worldY / TILE_HEIGHT + worldX / TILE_WIDTH) / 2;
-        float tileY = (worldY / TILE_HEIGHT - worldX / TILE_WIDTH) / 2;
-        return new Vector2(tileX, tileY);
-    }
-
     public byte[][] getBiomeMap() {
         return biomeMap;
-    }
-
-    /**
-     * Disposes of textures to free up memory.
-     */
-    public void dispose() {
-        grass.dispose();
-        water.dispose();
-        sand.dispose();
-        forest.dispose();
-        prairie.dispose();
-        desert.dispose();
-        mountain.dispose();
     }
 }

@@ -1,7 +1,37 @@
 {
-  "WATER": { "sheet": "256x256 Cubes.png", "x": 0, "y": 0, "width": 256, "height": 256 },
-  "GRASS": { "sheet": "256x256 Cubes.png", "x": 256, "y": 0, "width": 256, "height": 256 },
-  "DIRT": { "sheet": "256x256 Cubes.png", "x": 512, "y": 0, "width": 256, "height": 256 },
-  "PATHWAY": { "sheet": "256x256 Cubes.png", "x": 768, "y": 0, "width": 256, "height": 256 },
-  "COVERING": { "sheet": "256x256 Cubes.png", "x": 1024, "y": 0, "width": 256, "height": 256 }
+  "PRAIRIE": [
+    { "x": 0, "y": 0, "width": 256, "height": 192 },
+    { "x": 256, "y": 0, "width": 256, "height": 192 },
+    { "x": 512, "y": 0, "width": 256, "height": 192 },
+    { "x": 768, "y": 0, "width": 256, "height": 192 }
+  ],
+  "WATER": [
+    { "x": 0, "y": 192, "width": 256, "height": 192 },
+    { "x": 256, "y": 192, "width": 256, "height": 192 },
+    { "x": 512, "y": 192, "width": 256, "height": 192 },
+    { "x": 768, "y": 192, "width": 256, "height": 192 }
+  ],
+  "MOUNTAIN": [
+    { "x": 0, "y": 384, "width": 256, "height": 192 },
+    { "x": 256, "y": 384, "width": 256, "height": 192 },
+    { "x": 512, "y": 384, "width": 256, "height": 192 },
+    { "x": 768, "y": 384, "width": 256, "height": 192 }
+  ],
+  "FOREST": [
+    { "x": 1024, "y": 384, "width": 256, "height": 192 },
+    { "x": 1280, "y": 384, "width": 256, "height": 192 }
+  ],
+  "SNOWY": [
+    { "x": 0, "y": 576, "width": 256, "height": 192 },
+    { "x": 256, "y": 576, "width": 256, "height": 192 },
+    { "x": 512, "y": 576, "width": 256, "height": 192 },
+    { "x": 768, "y": 576, "width": 256, "height": 192 },
+    { "x": 1024, "y": 576, "width": 256, "height": 192 }
+  ],
+  "SPOOKY": [
+    { "x": 0, "y": 768, "width": 256, "height": 192 },
+    { "x": 256, "y": 768, "width": 256, "height": 192 },
+    { "x": 512, "y": 768, "width": 256, "height": 192 },
+    { "x": 768, "y": 768, "width": 256, "height": 192 }
+  ]
 }

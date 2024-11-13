@@ -1,3 +1,4 @@
+// core/src/main/java/project/project/Player.java
 package project.project;
 
 import com.badlogic.gdx.Gdx;
@@ -10,52 +11,63 @@ public class Player implements Entity {
     private Texture img;
     private Vector2 tilePos; // The player's position in tile coordinates
     private Vector2 worldPos; // The player's position in world coordinates
-    private float time;
+    private float moveTimer;
 
-    public static final float TILE_WIDTH = 64;
-    public static final float TILE_HEIGHT = 32;
+    public static final float TILE_WIDTH = Constants.TILE_WIDTH * 2f; // Adjusted for proper scaling
+    public static final float TILE_HEIGHT = Constants.TILE_HEIGHT * 2f;
 
-    // New constructor
-    public Player(Vector2 startingTilePos) {
-        img = new Texture("player1.png");
-        tilePos = new Vector2(startingTilePos);
-        worldPos = isoToWorld(tilePos.x, tilePos.y);
-        time = 2;
+    public Player(Vector2 startingWorldPos) {
+        img = new Texture(Constants.PLAYER_TEXTURE);
+        worldPos = new Vector2(startingWorldPos);
+        tilePos = worldToTile(worldPos.x, worldPos.y);
+        moveTimer = 0;
     }
 
     @Override
     public void render(SpriteBatch batch) {
+        // Ensure the player is centered on the tile
         batch.draw(img, worldPos.x - img.getWidth() / 2f, worldPos.y - img.getHeight() / 2f);
     }
 
     @Override
     public void update(float delta) {
-        time += delta;
-        if (time > 0.2f) {
-            move();
+        moveTimer += delta;
+        if (moveTimer > Constants.PLAYER_MOVE_INTERVAL) {
+            move(delta);
         }
     }
 
-    private void move() {
+    private void move(float delta) {
         boolean moved = false;
-        if (Gdx.input.isKeyJustPressed(Input.Keys.W)) {
-            tilePos.y += 1;
-            moved = true;
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.S)) {
-            tilePos.y -= 1;
+        Vector2 direction = new Vector2(0, 0);
+
+        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
+            direction.y += 1;
             moved = true;
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.A)) {
-            tilePos.x -= 1;
+        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
+            direction.y -= 1;
             moved = true;
-        } else if (Gdx.input.isKeyJustPressed(Input.Keys.D)) {
-            tilePos.x += 1;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
+            direction.x -= 1;
+            moved = true;
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
+            direction.x += 1;
             moved = true;
         }
 
         if (moved) {
-            worldPos = isoToWorld(tilePos.x, tilePos.y);
-            time = 0;
+            // Normalize direction to prevent faster diagonal movement
+            if (direction.len() > 0) {
+                direction.nor();
+            }
+
+            tilePos.x += direction.x;
+            tilePos.y += direction.y;
+            worldPos = tileToWorld(tilePos.x, tilePos.y);
+            moveTimer = 0;
         }
     }
 
@@ -72,9 +84,16 @@ public class Player implements Entity {
     }
 
     // Helper method to convert isometric tile coordinates to world coordinates
-    private Vector2 isoToWorld(float tileX, float tileY) {
+    private Vector2 tileToWorld(float tileX, float tileY) {
         float worldX = (tileX - tileY) * (TILE_WIDTH / 2f);
         float worldY = (tileX + tileY) * (TILE_HEIGHT / 2f);
         return new Vector2(worldX, worldY);
+    }
+
+    // Helper method to convert world coordinates to tile coordinates
+    private Vector2 worldToTile(float worldX, float worldY) {
+        float tileX = (worldY / TILE_HEIGHT + worldX / TILE_WIDTH) / 2f;
+        float tileY = (worldY / TILE_HEIGHT - worldX / TILE_WIDTH) / 2f;
+        return new Vector2(tileX, tileY);
     }
 }

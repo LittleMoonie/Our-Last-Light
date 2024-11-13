@@ -1,10 +1,11 @@
+// core/src/main/java/project/project/TileChunk.java
 package project.project;
 
 /**
  * Represents a chunk of tiles in the map.
  */
 public class TileChunk {
-    public static final int CHUNK_SIZE = 16;
+    public static final int CHUNK_SIZE = Constants.CHUNK_SIZE;
     public int startX, startY;
     public int[][] tiles;
 

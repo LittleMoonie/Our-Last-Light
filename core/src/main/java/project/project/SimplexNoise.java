@@ -1,3 +1,4 @@
+// core/src/main/java/project/project/SimplexNoise.java
 package project.project;
 
 import java.util.Random;
@@ -29,20 +30,37 @@ public class SimplexNoise {
             octaves[i] = new SimplexNoiseOctave(rnd.nextInt());
 
             frequencies[i] = Math.pow(2, i);
-            amplitudes[i] = Math.pow(persistence, numberOfOctaves - i);
+            amplitudes[i] = Math.pow(persistence, i);
         }
     }
 
-    public double getNoise(int x, int y) {
-        double result = 0;
+    /**
+     * Generates a normalized noise value by summing contributions from all octaves.
+     *
+     * @param x The x-coordinate in noise space.
+     * @param y The y-coordinate in noise space.
+     * @return A normalized noise value within [-1.0, 1.0].
+     */
+    public double getNoise(double x, double y) {
+        double noiseValue = 0.0;
+        double maxAmplitude = 0.0;
 
         for (int i = 0; i < octaves.length; i++) {
             double frequency = frequencies[i];
             double amplitude = amplitudes[i];
 
-            result += octaves[i].noise(x / frequency, y / frequency) * amplitude;
+            noiseValue += octaves[i].noise(x / frequency, y / frequency) * amplitude;
+            maxAmplitude += amplitude;
         }
 
-        return result;
+        // Normalize the noise value to ensure it stays within [-1.0, 1.0]
+        double normalizedNoise = noiseValue / maxAmplitude;
+
+
+        // Optional: Clamp the noise value to ensure it stays within [-1.0, 1.0]
+        normalizedNoise = Math.max(-1.0, Math.min(1.0, normalizedNoise));
+
+        System.out.println(normalizedNoise);
+        return normalizedNoise;
     }
 }
