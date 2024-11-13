@@ -1,0 +1,7 @@
+{
+  "WATER": { "sheet": "256x256 Cubes.png", "x": 0, "y": 0, "width": 256, "height": 256 },
+  "GRASS": { "sheet": "256x256 Cubes.png", "x": 256, "y": 0, "width": 256, "height": 256 },
+  "DIRT": { "sheet": "256x256 Cubes.png", "x": 512, "y": 0, "width": 256, "height": 256 },
+  "PATHWAY": { "sheet": "256x256 Cubes.png", "x": 768, "y": 0, "width": 256, "height": 256 },
+  "COVERING": { "sheet": "256x256 Cubes.png", "x": 1024, "y": 0, "width": 256, "height": 256 }
+}
