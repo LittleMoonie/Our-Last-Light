@@ -4,9 +4,13 @@ import com.badlogic.gdx.graphics.Texture;
 
 public class TextureComponent implements Component {
     public Texture texture;
+    public float width;
+    public float height;
 
-    public TextureComponent(String texturePath) {
+    public TextureComponent(String texturePath, float width, float height) {
         this.texture = new Texture(texturePath);
+        this.width = width;
+        this.height = height;
     }
 
     public void dispose() {

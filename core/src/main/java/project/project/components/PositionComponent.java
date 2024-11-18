@@ -1,18 +1,3 @@
-//package project.project.components;
-//
-//
-//import com.badlogic.gdx.math.Vector2;
-//
-//public class PositionComponent implements Component {
-//    public Vector2 tilePos;
-//    public Vector2 worldPos;
-//
-//    public PositionComponent(Vector2 startingTilePos) {
-//        this.tilePos = new Vector2(startingTilePos);
-//        this.worldPos = new Vector2(startingTilePos); // initialisé à zéro, sera mis à jour plus tard
-//    }
-//}
-
 package project.project.components;
 
 import com.badlogic.gdx.math.Vector2;
