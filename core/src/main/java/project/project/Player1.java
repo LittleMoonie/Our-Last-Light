@@ -6,7 +6,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 
-public class Player implements Entity {
+public class Player1 implements Entity {
     private Texture img;
     private Vector2 tilePos; // The player's position in tile coordinates
     private Vector2 worldPos; // The player's position in world coordinates
@@ -16,7 +16,7 @@ public class Player implements Entity {
     public static final float TILE_HEIGHT = 32;
 
     // New constructor
-    public Player(Vector2 startingTilePos) {
+    public void Player(Vector2 startingTilePos) {
         img = new Texture("player1.png");
         tilePos = new Vector2(startingTilePos);
         worldPos = isoToWorld(tilePos.x, tilePos.y);

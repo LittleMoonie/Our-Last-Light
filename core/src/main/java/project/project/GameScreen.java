@@ -1,3 +1,4 @@
+////// GameScreen.java
 package project.project;
 
 import com.badlogic.gdx.Gdx;
@@ -7,10 +8,16 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
+import project.project.components.TextureComponent;
+import project.project.entities.Player;
+import project.project.systems.MovementSystem;
+import project.project.systems.RenderSystem;
 
 public class GameScreen implements Screen {
     public static final int MAP_WIDTH = 100; // Adjust as needed
     public static final int MAP_HEIGHT = 100; // Adjust as needed
+    private MovementSystem movementSystem;
+    private RenderSystem renderSystem;
 
     private SpriteBatch batch;
     private OrthographicCamera camera;
@@ -24,38 +31,33 @@ public class GameScreen implements Screen {
 
     @Override
     public void show() {
-        // Initialize camera with appropriate viewport size
-        camera = new OrthographicCamera(MAP_WIDTH * IsometricRenderer.TILE_WIDTH / 2f, MAP_HEIGHT * IsometricRenderer.TILE_HEIGHT / 2f);
-        camera.position.set(0, 0, 0); // Initialize at (0, 0)
+        // Center of the map dimensions in isometric coordinates
+        float centerX = MAP_WIDTH / 2f;
+        float centerY = MAP_HEIGHT / 2f;
+
+        // Convert isometric center to world coordinates
+        Vector2 centerWorldPos = isoToWorld(centerX, centerY);
+
+        // Place the player at the center
+        player = new Player(new Vector2(centerX, centerY));
+        player.setWorldPosition(centerWorldPos.x, centerWorldPos.y);
+
+        // Initialize the camera to follow the player from the start
+        camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        centerCameraOnPlayer(); // Ensure camera starts centered on the player
         camera.update();
 
-        // Initialize the renderer with map dimensions
+        // Initialize the renderer
         renderer = new IsometricRenderer(MAP_WIDTH, MAP_HEIGHT);
 
-        // Count land tiles
-        byte[][] biomeMap = renderer.getBiomeMap();
-        int landCount = 0;
-        for (int x = 0; x < biomeMap.length; x++) {
-            for (int y = 0; y < biomeMap[0].length; y++) {
-                byte biome = biomeMap[x][y];
-                if (isLandBiome(biome)) {
-                    landCount++;
-                }
-            }
-        }
-        System.out.println("Number of land tiles: " + landCount);
+        // Systems
+        movementSystem = new MovementSystem();
+        renderSystem = new RenderSystem(batch);
 
-        // Find a land tile to spawn the player
-        Vector2 startingTilePos = findLandTile();
-        if (startingTilePos != null) {
-            System.out.println("Player starting tile position: " + startingTilePos);
-            player = new Player(startingTilePos);
-        } else {
-            System.out.println("No land tile found. Spawning at default position.");
-            player = new Player(new Vector2(0, 0));
-        }
+        // Debugging
+        System.out.println("Player position (iso): x = " + centerX + ", y = " + centerY);
+        System.out.println("Player position (world): x = " + centerWorldPos.x + ", y = " + centerWorldPos.y);
     }
-
 
     @Override
     public void render(float delta) {
@@ -63,24 +65,32 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
-        // Update player and handle input
-        player.update(delta);
-        handleInput();
+        // Update systems
+        movementSystem.update(delta, player);
 
         // Make the camera follow the player
-        camera.position.set(player.getWorldPosition().x, player.getWorldPosition().y, 0);
-        camera.update();
+        if (player.getWorldPosition() != null) {
+            centerCameraOnPlayer();
+            camera.update();
+        }
 
         // Set the camera's projection matrix
         batch.setProjectionMatrix(camera.combined);
 
-        // Begin drawing
+        // Draw the ground
         batch.begin();
-        renderer.drawGround(batch, player.getWorldPosition().x, player.getWorldPosition().y);
-        player.render(batch);
-        batch.end();
+        renderer.drawGround(batch, player.getWorldPosition().x, player.getWorldPosition().y); // Draw the map
+        renderSystem.update(delta, player); // Draw the player
+        handleInput();
+        batch.end(); // Ensure to end the batch here
     }
 
+    private Vector2 isoToWorld(float tileX, float tileY) {
+        // Correct conversion from isometric to world coordinates
+        float worldX = (tileX - tileY) * (IsometricRenderer.TILE_WIDTH / 2f);
+        float worldY = (tileX + tileY) * (IsometricRenderer.TILE_HEIGHT / 2f);
+        return new Vector2(worldX, worldY);
+    }
     private void handleInput() {
         if (Gdx.input.isKeyPressed(Input.Keys.Z)) {
             camera.zoom -= 0.002f;
@@ -90,59 +100,29 @@ public class GameScreen implements Screen {
             camera.zoom += 0.002f;
         }
 
-        // Remove manual camera movement since the camera follows the player
-    }
-
-    /**
-     * Searches the biome map for a land tile and returns its tile coordinates.
-     *
-     * @return A Vector2 representing the tile coordinates of a land tile, or null if none found.
-     */
-    private Vector2 findLandTile() {
-        byte[][] biomeMap = renderer.getBiomeMap();
-        int mapWidth = biomeMap.length;
-        int mapHeight = biomeMap[0].length;
-
-        int centerX = mapWidth / 2;
-        int centerY = mapHeight / 2;
-
-        int maxRadius = Math.max(centerX, centerY);
-
-        for (int radius = 0; radius < maxRadius; radius++) {
-            for (int x = centerX - radius; x <= centerX + radius; x++) {
-                for (int y = centerY - radius; y <= centerY + radius; y++) {
-                    if (x >= 0 && x < mapWidth && y >= 0 && y < mapHeight) {
-                        byte biome = biomeMap[x][y];
-                        if (isLandBiome(biome)) {
-                            return new Vector2(x, y);
-                        }
-                    }
-                }
-            }
+        // Center the camera on the player
+        if (player.getWorldPosition() != null) {
+            camera.position.set(player.getWorldPosition().x, player.getWorldPosition().y, 0);
+            camera.update();
         }
-
-        return null;
     }
 
-    /**
-     * Checks if a given biome is considered land.
-     *
-     * @param biome The biome identifier.
-     * @return True if it's a land biome, false otherwise.
-     */
-    private boolean isLandBiome(byte biome) {
-        return biome != MapGenerator.Biome.OCEAN.ordinal() && biome != MapGenerator.Biome.BEACH.ordinal();
+    private void centerCameraOnPlayer() {
+        Vector2 playerWorldPosition = player.getWorldPosition();
+        camera.position.set(playerWorldPosition.x, playerWorldPosition.y, 0);
     }
 
     @Override
     public void dispose() {
-        renderer.dispose();
-        player.dispose();
+        batch.dispose();
+        player.getComponent(TextureComponent.class).dispose();
     }
 
     @Override
     public void resize(int width, int height) {
-        // Optional: Adjust the viewport or camera if needed
+        camera.viewportWidth = width;
+        camera.viewportHeight = height;
+        camera.update();
     }
 
     @Override
