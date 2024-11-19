@@ -1,4 +1,4 @@
-package project.project;
+package project.project.entities;
 
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 

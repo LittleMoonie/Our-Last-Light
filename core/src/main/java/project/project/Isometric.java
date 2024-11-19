@@ -2,6 +2,7 @@ package project.project;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import project.project.screens.GameScreen;
 
 public class Isometric extends Game {
     private SpriteBatch batch;

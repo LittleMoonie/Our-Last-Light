@@ -1,4 +1,7 @@
-package project.project;
+// core/src/main/java/project/project/SimplexNoiseOctave.java
+package project.project.noise;
+
+import java.util.Random;
 
 public class SimplexNoiseOctave {
     private static final int GRADIENT_SIZE_TABLE = 256;
@@ -22,7 +25,7 @@ public class SimplexNoiseOctave {
         }
 
         // Shuffle using the seed
-        java.util.Random random = new java.util.Random(seed);
+        Random random = new Random(seed);
         for (int i = GRADIENT_SIZE_TABLE - 1; i > 0; i--) {
             int k = random.nextInt(i + 1);
             int temp = p[i];
@@ -47,7 +50,13 @@ public class SimplexNoiseOctave {
         }
     }
 
-    // 2D simplex noise
+    /**
+     * Generates the raw simplex noise value for the given coordinates.
+     *
+     * @param xin The x-coordinate in noise space.
+     * @param yin The y-coordinate in noise space.
+     * @return The raw noise value.
+     */
     public double noise(double xin, double yin) {
         double n0, n1, n2; // Noise contributions from the three corners
 
@@ -92,8 +101,11 @@ public class SimplexNoiseOctave {
         n1 = cornerContribution(x1, y1, grad3[gi1]);
         n2 = cornerContribution(x2, y2, grad3[gi2]);
 
-        // Add contributions from each corner to get the final noise value
-        return 70.0 * (n0 + n1 + n2); // Scale the result to cover the range [-1,1]
+        // Sum the noise contributions without excessive scaling
+        double rawNoise = n0 + n1 + n2;
+
+        // No normalization or clamping here
+        return rawNoise;
     }
 
     private double cornerContribution(double x, double y, Grad grad) {
