@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
+import project.project.Constants;
 import project.project.map.Biome;
 import project.project.map.MapGenerator;
 
@@ -15,9 +16,6 @@ import java.util.List;
 import java.util.Map;
 
 public class IsometricRenderer {
-    private static final int TILE_WIDTH = 256;
-    private static final int TILE_HEIGHT = 192;
-
     private byte[][] biomeMap;
     private int[][] tileVariants;
     private List<MapGenerator.ResourcePlacement> resources;
@@ -80,15 +78,15 @@ public class IsometricRenderer {
     public void drawGround(SpriteBatch batch) {
         for (int row = biomeMap.length - 1; row >= 0; row--) {
             for (int col = biomeMap[0].length - 1; col >= 0; col--) {
-                float x = (col - row) * (TILE_WIDTH / 2f);
-                float y = (col + row) * (TILE_HEIGHT / 3f);
+                float x = (col - row) * (Constants.TILE_WIDTH / 2f);
+                float y = (col + row) * (Constants.TILE_HEIGHT / 3f);
 
                 String biomeName = Biome.values()[biomeMap[row][col]].name();
                 BiomeResources resources = biomeResources.get(biomeName);
 
                 if (resources != null && !resources.tiles.isEmpty()) {
                     TextureRegion tileTexture = resources.tiles.get(tileVariants[row][col] % resources.tiles.size());
-                    batch.draw(tileTexture, x, y, TILE_WIDTH, TILE_HEIGHT);
+                    batch.draw(tileTexture, x, y, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
                 }
             }
         }
@@ -97,8 +95,8 @@ public class IsometricRenderer {
 
     private void drawPreplacedResources(SpriteBatch batch) {
         for (MapGenerator.ResourcePlacement resource : resources) {
-            float x = (resource.x - resource.y) * (TILE_WIDTH / 2f);
-            float y = (resource.x + resource.y) * (TILE_HEIGHT / 3f);
+            float x = (resource.x - resource.y) * (Constants.TILE_WIDTH / 2f);
+            float y = (resource.x + resource.y) * (Constants.TILE_HEIGHT / 3f);
 
             String biomeName = Biome.values()[biomeMap[resource.x][resource.y]].name();
             BiomeResources biomeResources = this.biomeResources.get(biomeName);
@@ -114,7 +112,7 @@ public class IsometricRenderer {
 
             if (resourceTexture != null) {
                 float heightMultiplier = (resource.type == MapGenerator.ResourceType.TREE) ? 2f : 1f;
-                batch.draw(resourceTexture, x, y, TILE_WIDTH, TILE_HEIGHT * heightMultiplier);
+                batch.draw(resourceTexture, x, y, Constants.TILE_WIDTH, Constants.TILE_HEIGHT * heightMultiplier);
             }
         }
     }

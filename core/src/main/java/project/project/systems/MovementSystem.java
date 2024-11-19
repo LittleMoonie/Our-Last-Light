@@ -53,38 +53,31 @@ public class MovementSystem {
 
 
     private void move(PositionComponent position, float speed, Player player) {
-        boolean moved = false;
         float deltaX = 0, deltaY = 0;
 
         if (Gdx.input.isKeyPressed(Input.Keys.W)) {
             deltaY += 1;
-            moved = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.S)) {
             deltaY -= 1;
-            moved = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
             deltaX -= 1;
-            moved = true;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.D)) {
             deltaX += 1;
-            moved = true;
         }
 
-        if (moved) {
-            Vector2 movement = new Vector2(deltaX, deltaY);
-            if (movement.len() > 1.5f) {
-                movement.nor(); // Normalize the vector to prevent acceleration
-            }
-            movement.scl(speed); // Scale by speed
+        if (deltaX != 0 || deltaY != 0) {
+            Vector2 movement = new Vector2(deltaX, deltaY).nor().scl(speed);
 
+            // Update tile position
             position.setTilePosition(
                 position.tilePos.x + movement.x,
                 position.tilePos.y + movement.y
             );
 
+            // Synchronize the world position
             player.setWorldPosition(position.worldPos.x, position.worldPos.y);
         }
     }

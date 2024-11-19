@@ -24,7 +24,6 @@ public class HealthSystem {
             HealthComponent health = entity.getComponent(HealthComponent.class);
             if (health != null && health.isAlive()) {
                 health.decreaseHealth(10); // Exemple de dégâts
-                System.out.println("Entity " + entity.name + " (id: " + entity.getId() + ")" + " health: " + health.getHealth());
             }
         }
     }

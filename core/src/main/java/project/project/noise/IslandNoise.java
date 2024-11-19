@@ -93,8 +93,6 @@ public class IslandNoise {
             }
         }
 
-        System.out.println("Biome Value Range: " + minBiomeValue + " to " + maxBiomeValue);
-
         // Normalize biome values and assign biomes
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
@@ -111,8 +109,6 @@ public class IslandNoise {
                 }
             }
         }
-
-        System.out.println("Normalized Biome Value Range: 0.0 to 1.0");
 
         // Step 5: Ensure all biomes appear
         ensureAllBiomesAppear(biomeMap);

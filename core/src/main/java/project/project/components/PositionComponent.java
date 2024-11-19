@@ -1,7 +1,7 @@
 package project.project.components;
 
 import com.badlogic.gdx.math.Vector2;
-import project.project.IsometricRenderer;
+import project.project.Constants;
 
 public class PositionComponent implements Component {
     public Vector2 tilePos; // Position en tuiles
@@ -26,17 +26,17 @@ public class PositionComponent implements Component {
 
     // Conversion tuile -> monde
     private Vector2 tileToWorld(Vector2 tilePos) {
-        float worldX = (tilePos.x - tilePos.y) * (IsometricRenderer.TILE_WIDTH / 2f);
-        float worldY = (tilePos.x + tilePos.y) * (IsometricRenderer.TILE_HEIGHT / 2f);
+        float worldX = (tilePos.x - tilePos.y) * (Constants.TILE_WIDTH / 2f);
+        float worldY = (tilePos.x + tilePos.y) * (Constants.TILE_HEIGHT / 2f);
         return new Vector2(worldX, worldY);
     }
 
     // Conversion monde -> tuile
     private Vector2 worldToTile(Vector2 worldPos) {
-        float tileX = (worldPos.x / (IsometricRenderer.TILE_WIDTH / 2f) +
-            worldPos.y / (IsometricRenderer.TILE_HEIGHT / 2f)) / 2f;
-        float tileY = (worldPos.y / (IsometricRenderer.TILE_HEIGHT / 2f) -
-            worldPos.x / (IsometricRenderer.TILE_WIDTH / 2f)) / 2f;
+        float tileX = (worldPos.x / (Constants.TILE_WIDTH / 2f) +
+            worldPos.y / (Constants.TILE_HEIGHT / 2f)) / 2f;
+        float tileY = (worldPos.y / (Constants.TILE_HEIGHT / 2f) -
+            worldPos.x / (Constants.TILE_WIDTH / 2f)) / 2f;
         return new Vector2(tileX, tileY);
     }
 }
