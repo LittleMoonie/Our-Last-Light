@@ -1,8 +1,6 @@
-package project.project;
+package project.project.utils;
 
 import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.Random;
 
 public class SeedGenerator {
 

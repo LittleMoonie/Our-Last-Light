@@ -1,11 +1,15 @@
 // core/src/main/java/project/project/Player.java
-package project.project;
+package project.project.entities;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
+import project.project.Constants;
+
+import static project.project.utils.CoordinateUtils.tileToWorld;
+import static project.project.utils.CoordinateUtils.worldToTile;
 
 public class Player implements Entity {
     private Texture img;
@@ -81,19 +85,5 @@ public class Player implements Entity {
 
     public void dispose() {
         img.dispose();
-    }
-
-    // Helper method to convert isometric tile coordinates to world coordinates
-    private Vector2 tileToWorld(float tileX, float tileY) {
-        float worldX = (tileX - tileY) * (TILE_WIDTH / 2f);
-        float worldY = (tileX + tileY) * (TILE_HEIGHT / 2f);
-        return new Vector2(worldX, worldY);
-    }
-
-    // Helper method to convert world coordinates to tile coordinates
-    private Vector2 worldToTile(float worldX, float worldY) {
-        float tileX = (worldY / TILE_HEIGHT + worldX / TILE_WIDTH) / 2f;
-        float tileY = (worldY / TILE_HEIGHT - worldX / TILE_WIDTH) / 2f;
-        return new Vector2(tileX, tileY);
     }
 }

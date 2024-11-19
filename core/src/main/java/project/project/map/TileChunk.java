@@ -1,5 +1,7 @@
 // core/src/main/java/project/project/TileChunk.java
-package project.project;
+package project.project.map;
+
+import project.project.Constants;
 
 /**
  * Represents a chunk of tiles in the map.

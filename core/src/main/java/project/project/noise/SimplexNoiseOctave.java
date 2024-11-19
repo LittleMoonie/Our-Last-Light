@@ -1,5 +1,5 @@
 // core/src/main/java/project/project/SimplexNoiseOctave.java
-package project.project;
+package project.project.noise;
 
 import java.util.Random;
 
