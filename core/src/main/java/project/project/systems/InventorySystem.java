@@ -14,60 +14,29 @@ public class InventorySystem {
      * @return true if the item was successfully added, false if the inventory is full.
      */
     public boolean addItem(InventoryComponent inventory, InventoryItem item) {
-        // Check if the item can be added to the hotbar (row 0)
-        if (item.getItemType() == ItemType.WEAPON || item.getItemType() == ItemType.CONSUMABLE) {
+        // First try to stack with existing items
+        for (int row = 0; row < inventory.getRows(); row++) {
             for (int col = 0; col < inventory.getCols(); col++) {
-                InventoryItem existingItem = inventory.getItem(0, col); // Hotbar is row 0
-                if (existingItem != null && existingItem.getName().equals(item.getName())
-                    && existingItem.getQuantity() < 64) {
+                InventoryItem existingItem = inventory.getItem(row, col);
+                if (existingItem != null && existingItem.isSameType(item) && existingItem.getQuantity() < 64) {
                     int spaceLeft = 64 - existingItem.getQuantity();
                     int quantityToAdd = Math.min(spaceLeft, item.getQuantity());
                     existingItem.setQuantity(existingItem.getQuantity() + quantityToAdd);
                     item.setQuantity(item.getQuantity() - quantityToAdd);
                     if (item.getQuantity() == 0) {
-                        return true; // Fully added to hotbar
+                        return true; // Fully added
                     }
-                }
-            }
-
-            for (int col = 0; col < inventory.getCols(); col++) {
-                if (inventory.getItem(0, col) == null) { // Check for an empty slot in the hotbar
-                    inventory.setItem(0, col, new InventoryItem(
-                        item.getName(),
-                        item.getQuantity(),
-                        item.getTexture().filePath,
-                        item.getItemType()
-                    ));
-                    return true; // Fully added to hotbar
                 }
             }
         }
 
-        // If the item cannot go in the hotbar or the hotbar is full, add it to the main inventory
-        for (int row = 1; row < inventory.getRows(); row++) { // Start from row 1 to exclude the hotbar
+        // Then try to add to an empty slot
+        for (int row = 0; row < inventory.getRows(); row++) {
             for (int col = 0; col < inventory.getCols(); col++) {
-                InventoryItem existingItem = inventory.getItem(row, col);
-                if (existingItem != null && existingItem.getName().equals(item.getName())
-                    && existingItem.getQuantity() < 64) {
-                    int spaceLeft = 64 - existingItem.getQuantity();
-                    int quantityToAdd = Math.min(spaceLeft, item.getQuantity());
-                    existingItem.setQuantity(existingItem.getQuantity() + quantityToAdd);
-                    item.setQuantity(item.getQuantity() - quantityToAdd);
-                    if (item.getQuantity() == 0) {
-                        return true; // Fully added to inventory
-                    }
-                }
-            }
-
-            for (int col = 0; col < inventory.getCols(); col++) {
-                if (inventory.getItem(row, col) == null) { // Check for an empty slot in the main inventory
-                    inventory.setItem(row, col, new InventoryItem(
-                        item.getName(),
-                        item.getQuantity(),
-                        item.getTexture().filePath,
-                        item.getItemType()
-                    ));
-                    return true; // Fully added to inventory
+                if (row == 0 && !item.canPlaceInHotbar()) continue; // Skip invalid items for the hotbar
+                if (inventory.getItem(row, col) == null) {
+                    inventory.setItem(row, col, item);
+                    return true; // Added to empty slot
                 }
             }
         }

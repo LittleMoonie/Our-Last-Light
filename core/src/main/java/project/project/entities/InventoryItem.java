@@ -62,6 +62,6 @@ public class InventoryItem {
     }
 
     public boolean canPlaceInHotbar() {
-        return itemType == ItemType.WEAPON || itemType == ItemType.CONSUMABLE;
+        return itemType == ItemType.TOOL || itemType == ItemType.CONSUMABLE;
     }
 }

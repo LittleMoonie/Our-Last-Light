@@ -1,7 +1,7 @@
 package project.project.entities;
 
 public enum ItemType {
-    WEAPON,
+    TOOL,
     CONSUMABLE,
     MATERIAL,
     BUILDING

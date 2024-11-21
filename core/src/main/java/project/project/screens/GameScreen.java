@@ -19,8 +19,10 @@ import project.project.rendering.IsometricRenderer;
 import project.project.map.MapGenerator;
 import project.project.entities.Player;
 import project.project.systems.MovementSystem;
+import project.project.systems.ObjectPlacementSystem;
 import project.project.systems.RenderSystem;
 import project.project.ui.HUD;
+import project.project.ui.InventoryUI;
 import project.project.utils.CoordinateUtils;
 import project.project.ui.InventoryUI;
 
@@ -40,15 +42,9 @@ public class GameScreen implements Screen {
     private InventoryUI inventoryUI;
     private Stage stage;
     private boolean isInventoryOpen = false; // Track inventory state
-    private final SpriteBatch batch;
-    private final OrthographicCamera camera;
-    private final IsometricRenderer renderer;
-    private final Player player;
-    private final BitmapFont font;
-    private final HUD hud;
+    private ObjectPlacementSystem placementSystem;
     private final MapLoader mapLoader;
-    private final MovementSystem movementSystem;
-    private final RenderSystem renderSystem;
+
 
     public GameScreen(SpriteBatch batch) {
         this.batch = batch;
@@ -74,10 +70,22 @@ public class GameScreen implements Screen {
 
         // HUD and systems
         this.hud = new HUD(batch, player);
+
+        // Initialize systems
+        this.placementSystem = new ObjectPlacementSystem();
+
+        // Add the player to the render system
         this.movementSystem = new MovementSystem();
         this.renderSystem = new RenderSystem(batch, camera);
         renderSystem.addEntity(player);
 
+        // Initialize stage
+        this.stage = new Stage(new ScreenViewport());
+        Gdx.input.setInputProcessor(stage);
+
+        // Initialize the inventory UI
+        this.inventoryUI = new InventoryUI(stage, player, placementSystem);
+        inventoryUI.setVisible(false); // Start with the inventory hidden
         // Font for debug UI
         this.font = new BitmapFont();
 
@@ -91,26 +99,22 @@ public class GameScreen implements Screen {
         Gdx.input.setInputProcessor(stage); // Redirect input to stage
 
         // Initialize the inventory UI
-        inventoryUI = new InventoryUI(stage, player);
+        inventoryUI = new InventoryUI(stage, player, placementSystem);
         inventoryUI.setVisible(false); // Start with the inventory hidden
     }
 
+    @Override
     public void render(float delta) {
-        // Ensure the hotbar and inventory are correctly positioned
-        resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        // Ensure systems are initialized
+        if (renderSystem == null) {
+            throw new IllegalStateException("RenderSystem is not initialized!");
+        }
 
-        // Clear screen
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         // Handle input
         handleInput(delta);
-
-        // Update camera
-        centerCameraOnPlayer();
-
-
-
 
         // Update player position smoothly
         movementSystem.update(delta, player);
@@ -152,7 +156,7 @@ public class GameScreen implements Screen {
         renderSystem.update(delta); // Ensure this does not call batch.begin() again
         batch.end();
 
-        // Render HUD and Inventory
+        // Render HUD and UI
         hud.update();
         hud.render();
 
@@ -228,4 +232,5 @@ public class GameScreen implements Screen {
 
     @Override
     public void hide() {}
+
 }

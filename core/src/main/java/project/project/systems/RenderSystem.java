@@ -27,9 +27,6 @@ public class RenderSystem {
         entities.add(entity);
     }
 
-
-
-
     public void update(float delta) {
         for (Entity entity : entities) {
             if (entity instanceof Character) {
