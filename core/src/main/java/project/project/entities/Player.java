@@ -1,0 +1,153 @@
+package project.project.entities;
+
+import com.badlogic.gdx.math.Vector2;
+import project.project.components.*;
+import project.project.entities.InventoryItem;
+import project.project.systems.InventorySystem;
+
+public class Player extends Character {
+    private PositionComponent position;
+
+    // Inventory system: 6 rows, 9 columns
+    private InventoryItem[][] inventory;
+
+    // Listener to notify UI of inventory changes
+    private Runnable inventoryUpdateListener;
+
+    public Player(Vector2 startingTilePos) {
+        super("Player");
+        this.position = new PositionComponent(startingTilePos);
+        addComponent(this.position);
+        addComponent(new TextureComponent("player1.png", 50, 70));
+        addComponent(new HealthComponent(100));
+        addComponent(new MovementComponent(2));
+
+        // Inventory
+        InventoryComponent inventory = new InventoryComponent(6, 9);
+        addComponent(inventory);
+
+        // Add predefined items
+        InventorySystem inventorySystem = new InventorySystem();
+
+        // Materials
+        inventorySystem.addItem(inventory, new InventoryItem("wood", 64, "wood.png", ItemType.MATERIAL));
+        inventorySystem.addItem(inventory, new InventoryItem("stone", 64, "stone.png", ItemType.MATERIAL));
+
+        // Tools
+        inventorySystem.addItem(inventory, new InventoryItem("sword", 1, "sword.png", ItemType.WEAPON));
+        inventorySystem.addItem(inventory, new InventoryItem("pickaxe", 1, "pickaxe.png", ItemType.WEAPON));
+        inventorySystem.addItem(inventory, new InventoryItem("axe", 1, "axe.png", ItemType.WEAPON));
+
+        // Consumables
+        inventorySystem.addItem(inventory, new InventoryItem("healing potion", 5, "healing_potion.png", ItemType.CONSUMABLE));
+        inventorySystem.addItem(inventory, new InventoryItem("steak", 10, "steak.png", ItemType.CONSUMABLE));
+
+        // Building items
+        inventorySystem.addItem(inventory, new InventoryItem("campfire", 1, "campfire.png", ItemType.BUILDING));
+    }
+
+    public Vector2 getWorldPosition() {
+        return position.worldPos;
+    }
+
+    public void setWorldPosition(float x, float y) {
+        position.setWorldPosition(x, y);
+    }
+
+    /**
+     * Adds an item to the inventory.
+     * If the item already exists in a stack, it increments the quantity.
+     * If the item is new, it finds the first empty slot to add it.
+     */
+    public boolean addItemToInventory(String name, int quantity, String texturePath, ItemType itemType) {
+        // Try to stack the item in an existing slot
+        for (int row = 0; row < inventory.length; row++) {
+            for (int col = 0; col < inventory[row].length; col++) {
+                if (inventory[row][col] != null && inventory[row][col].getName().equals(name) &&
+                    inventory[row][col].getQuantity() < 64) {
+                    int newQuantity = Math.min(inventory[row][col].getQuantity() + quantity, 64);
+                    inventory[row][col].setQuantity(newQuantity);
+                    notifyInventoryUpdate();
+                    return true;
+                }
+            }
+        }
+
+        // Add the item to the first empty slot
+        for (int row = 0; row < inventory.length; row++) {
+            for (int col = 0; col < inventory[row].length; col++) {
+                if (inventory[row][col] == null) {
+                    inventory[row][col] = new InventoryItem(name, quantity, texturePath, itemType);
+                    notifyInventoryUpdate();
+                    return true;
+                }
+            }
+        }
+
+        // Inventory is full
+        return false;
+    }
+
+    /**
+     * Removes a specified quantity of an item from the inventory.
+     * If the quantity reaches zero, the slot is cleared.
+     */
+    public boolean removeItemFromInventory(String name, int quantity) {
+        for (int row = 0; row < inventory.length; row++) {
+            for (int col = 0; col < inventory[row].length; col++) {
+                if (inventory[row][col] != null && inventory[row][col].getName().equals(name)) {
+                    if (inventory[row][col].getQuantity() >= quantity) {
+                        inventory[row][col].setQuantity(inventory[row][col].getQuantity() - quantity);
+                        if (inventory[row][col].getQuantity() == 0) {
+                            clearInventorySlot(row, col);
+                        }
+                        notifyInventoryUpdate();
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Clears a specific inventory slot.
+     */
+    public void clearInventorySlot(int row, int col) {
+        if (row >= 0 && row < inventory.length && col >= 0 && col < inventory[row].length) {
+            if (inventory[row][col] != null) {
+                inventory[row][col].dispose(); // Dispose of the texture
+                inventory[row][col] = null; // Clear the slot
+            }
+            notifyInventoryUpdate();
+        }
+    }
+
+    /**
+     * Clears all inventory slots.
+     */
+    public void clearInventory() {
+        for (int row = 0; row < inventory.length; row++) {
+            for (int col = 0; col < inventory[row].length; col++) {
+                clearInventorySlot(row, col);
+            }
+        }
+    }
+
+    /**
+     * Sets a listener to notify when the inventory is updated.
+     */
+    public void setInventoryUpdateListener(Runnable listener) {
+        this.inventoryUpdateListener = listener;
+    }
+
+    private void notifyInventoryUpdate() {
+        if (inventoryUpdateListener != null) {
+            inventoryUpdateListener.run();
+        }
+    }
+
+    public InventoryItem[][] getInventory() {
+        return inventory;
+    }
+}
