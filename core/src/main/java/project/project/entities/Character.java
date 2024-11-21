@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 import project.project.components.Component;
 
-public abstract class Character {
+public class Character {
     private final UUID id;
     private final Map<Class<? extends Component>, Component> components;
     public String name;

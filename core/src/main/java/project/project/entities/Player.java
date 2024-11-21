@@ -2,8 +2,11 @@ package project.project.entities;
 
 import com.badlogic.gdx.math.Vector2;
 import project.project.components.*;
-import project.project.entities.InventoryItem;
 import project.project.systems.InventorySystem;
+import project.project.systems.ObjectPlacementSystem;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class Player extends Character {
     private PositionComponent position;
@@ -44,6 +47,34 @@ public class Player extends Character {
 
         // Building items
         inventorySystem.addItem(inventory, new InventoryItem("campfire", 1, "campfire.png", ItemType.BUILDING));
+
+        CraftingComponent crafting = new CraftingComponent();
+
+        // Add recipes for crafting
+        Map<String, Integer> campfireRecipe = new HashMap<>();
+        campfireRecipe.put("wood", 5);
+        campfireRecipe.put("stone", 3);
+
+        Map<String, Integer> chestRecipe = new HashMap<>();
+        chestRecipe.put("wood", 8);
+
+        crafting.addRecipe("campfire", campfireRecipe);
+        crafting.addRecipe("chest", chestRecipe);
+
+        this.addComponent(crafting);
+
+        ObjectPlacementSystem placementSystem = new ObjectPlacementSystem();
+
+        Character campfire = new Character("Campfire");
+        campfire.addComponent(new PlacementComponent(true, 1, 1));
+        campfire.addComponent(new HitboxComponent(32, 32));
+
+        Character chest = new Character("Chest");
+        chest.addComponent(new PlacementComponent(true, 1, 1));
+        chest.addComponent(new HitboxComponent(32, 32));
+
+        placementSystem.placeObject(this, campfire, new Vector2(5, 5), false);
+        placementSystem.placeObject(this, chest, new Vector2(6, 5), false);
     }
 
     public Vector2 getWorldPosition() {
@@ -141,7 +172,7 @@ public class Player extends Character {
         this.inventoryUpdateListener = listener;
     }
 
-    private void notifyInventoryUpdate() {
+    public void notifyInventoryUpdate() {
         if (inventoryUpdateListener != null) {
             inventoryUpdateListener.run();
         }
@@ -150,4 +181,5 @@ public class Player extends Character {
     public InventoryItem[][] getInventory() {
         return inventory;
     }
+
 }

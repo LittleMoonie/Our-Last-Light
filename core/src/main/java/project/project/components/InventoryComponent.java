@@ -48,4 +48,22 @@ public class InventoryComponent implements Component {
     public int getCols() {
         return cols;
     }
+
+    public boolean removeItemFromInventory(String name, int quantity) {
+        for (int row = 0; row < items.length; row++) {
+            for (int col = 0; col < items[row].length; col++) {
+                InventoryItem item = items[row][col];
+                if (item != null && item.getName().equals(name)) {
+                    if (item.getQuantity() >= quantity) {
+                        item.setQuantity(item.getQuantity() - quantity);
+                        if (item.getQuantity() == 0) {
+                            items[row][col] = null;
+                        }
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 }

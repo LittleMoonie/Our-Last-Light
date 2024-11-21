@@ -12,11 +12,11 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import project.project.Constants;
 import project.project.components.TextureComponent;
-import project.project.map.Biome;
 import project.project.rendering.IsometricRenderer;
 import project.project.map.MapGenerator;
 import project.project.entities.Player;
 import project.project.systems.MovementSystem;
+import project.project.systems.ObjectPlacementSystem;
 import project.project.systems.RenderSystem;
 import project.project.ui.HUD;
 import project.project.ui.InventoryUI;
@@ -34,6 +34,7 @@ public class GameScreen implements Screen {
     private InventoryUI inventoryUI;
     private Stage stage;
     private boolean isInventoryOpen = false; // Track inventory state
+    private ObjectPlacementSystem placementSystem;
 
     public GameScreen(SpriteBatch batch) {
         this.batch = batch;
@@ -55,12 +56,22 @@ public class GameScreen implements Screen {
         this.hud = new HUD(batch, player);
 
         // Initialize systems
-        this.movementSystem = new MovementSystem();
+        this.placementSystem = new ObjectPlacementSystem();
+        this.movementSystem = new MovementSystem(placementSystem);
+
+        // Initialize render system (fix for NullPointerException)
         this.renderSystem = new RenderSystem(batch);
+
+        // Add the player to the render system
         renderSystem.addEntity(player);
 
-        // Initialize font for debug UI
-        this.font = new BitmapFont();
+        // Initialize stage
+        this.stage = new Stage(new ScreenViewport());
+        Gdx.input.setInputProcessor(stage);
+
+        // Initialize the inventory UI
+        this.inventoryUI = new InventoryUI(stage, player, placementSystem);
+        inventoryUI.setVisible(false); // Start with the inventory hidden
     }
 
     @Override
@@ -69,13 +80,16 @@ public class GameScreen implements Screen {
         Gdx.input.setInputProcessor(stage); // Redirect input to stage
 
         // Initialize the inventory UI
-        inventoryUI = new InventoryUI(stage, player);
+        inventoryUI = new InventoryUI(stage, player, placementSystem);
         inventoryUI.setVisible(false); // Start with the inventory hidden
     }
 
+    @Override
     public void render(float delta) {
-        // Ensure the hotbar and inventory are correctly positioned
-        resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+        // Ensure systems are initialized
+        if (renderSystem == null) {
+            throw new IllegalStateException("RenderSystem is not initialized!");
+        }
 
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
@@ -85,14 +99,14 @@ public class GameScreen implements Screen {
         // Update camera
         centerCameraOnPlayer();
 
-        // Render the game world
+        // Render game world
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         renderer.drawGround(batch);
         renderSystem.update(delta); // Render entities
         batch.end();
 
-        // Render HUD and Inventory
+        // Render HUD and UI
         hud.update();
         hud.render();
 
