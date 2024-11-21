@@ -228,9 +228,4 @@ public class GameScreen implements Screen {
 
     @Override
     public void hide() {}
-
-    @Override
-    public void show() {}
-        // Optional: Debug information or initialization logic if needed
-    }
 }
