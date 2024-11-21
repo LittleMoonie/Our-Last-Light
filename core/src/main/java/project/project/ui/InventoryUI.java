@@ -43,8 +43,6 @@ public class InventoryUI {
     private Texture brownSquareTexture;
     private Texture graySquareTexture;
 
-    private Image backgroundImage; // Track the background image
-
     private InventoryItem pickedUpItem = null;
     private Image draggingItemImage = null; // Image for the item currently being dragged
 
@@ -55,58 +53,53 @@ public class InventoryUI {
     private Texture buttonTexture;
     private Texture navigationTexture;
 
+    private Image craftingNavigationBackground; // Background for crafting navigation
+    private Image craftingMenuBackground; // Background for crafting menu
+
     public InventoryUI(Stage stage, Player player, ObjectPlacementSystem placementSystem) {
         this.stage = stage;
         this.player = player;
         this.placementSystem = placementSystem;
 
-        inventoryTable = new Table();
-        hotbarTable = new Table();
-        craftingTable = new Table(); // Initialize crafting table
-        hotbarGroup = new Group();
-
-        // Initialize font
+        // Initialize font and textures
         font = new BitmapFont();
+        brownSquareTexture = createRoundedTexture(58, 58, new Color(0.6f, 0.3f, 0.0f, 0.5f), 8); // Brown texture for inventory slots with 8px corner radius
+        graySquareTexture = createRoundedTexture(150, 50, new Color(0.3f, 0.3f, 0.3f, 0.5f), 10); // Gray texture for crafting buttons with 10px corner radius
 
-        // Create textures
-        brownSquareTexture = createSquareTexture(58, 58, 0.6f, 0.3f, 0.0f, 0.5f); // Brown texture for inventory slots
-        graySquareTexture = createSquareTexture(150, 50, 0.3f, 0.3f, 0.3f, 0.5f); // Gray texture for crafting buttons
-
-        font = new BitmapFont();
-
-        // Textures for the UI
         backgroundTexture = createTexture(600, 400, new Color(0.5f, 0.25f, 0.25f, 1)); // Soft red-brown
         slotTexture = createTexture(64, 64, new Color(0.3f, 0.3f, 0.3f, 1)); // Dark gray for slots
-        buttonTexture = createTexture(150, 50, new Color(0.6f, 0.4f, 0.2f, 1)); // Soft brown buttons
-        navigationTexture = createTexture(50, 50, new Color(0.4f, 0.3f, 0.2f, 1)); // Vertical navigation buttons
-
+        navigationTexture = createRoundedTexture(200, 50, new Color(0.4f, 0.3f, 0.2f, 1), 10); // Rounded corners for navigation buttons
+        buttonTexture = createRoundedTexture(150, 50, new Color(0.6f, 0.4f, 0.2f, 1), 10);     // Rounded corners for crafting buttons
+        // Initialize UI components
         inventoryTable = new Table();
         craftingTable = new Table();
-        craftingNavigationTable = new Table(); // Initialize navigation
+        craftingNavigationTable = new Table();
+        hotbarTable = new Table(); // Ensure hotbarTable is initialized
         hotbarGroup = new Group();
 
-        // Add background
+        // Create and add background
         createBackground();
 
+        // Populate and initialize UI components
         populateInventoryUI();
-        initializeCraftingNavigationUI(); // Add this line
+        initializeCraftingNavigationUI();
+        populateHotbarUI(); // Ensure hotbarTable is populated before positioning
+
+        // Initialize positions
+        initializeUIPositions();
+
+        // Add actors to the stage in the correct order
+        stage.addActor(craftingMenuBackground);       // Background
+        stage.addActor(craftingNavigationBackground); // Crafting navigation background
+        stage.addActor(craftingNavigationTable); // Crafting navigation
+        stage.addActor(inventoryTable);       // Inventory
+        stage.addActor(craftingTable);        // Crafting table
+        stage.addActor(hotbarGroup);          // Hotbar
 
         // Initialize dragging item image
         draggingItemImage = new Image();
         draggingItemImage.setVisible(false);
-        stage.addActor(draggingItemImage);
-
-        // Populate inventory, hotbar, and crafting slots
-        populateInventoryUI();
-        populateHotbarUI();
-
-        // Initialize positions
-        initializeUIPositions(); // Set initial positions of UI elements
-
-        // Add hotbar and inventory to the stage
-        stage.addActor(hotbarGroup);
-        stage.addActor(inventoryTable);
-        stage.addActor(craftingTable); // Add crafting table to the stage
+        stage.addActor(draggingItemImage); // Dragging image
     }
 
     private Texture createPlaceholderTexture(int width, int height, Color color) {
@@ -128,22 +121,62 @@ public class InventoryUI {
     }
 
     private void createBackground() {
-        if (backgroundImage == null) {
-            backgroundImage = new Image(new TextureRegionDrawable(new TextureRegion(backgroundTexture)));
-            backgroundImage.setSize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-            backgroundImage.setPosition(0, 0);
-            stage.addActor(backgroundImage);
+
+        // Initialize crafting menu background
+        if (craftingMenuBackground == null) {
+            craftingMenuBackground = new Image(new TextureRegionDrawable(new TextureRegion(
+                    createRoundedTexture(600, 400, new Color(0.15f, 0.15f, 0.15f, 0.75f), 15) // 15px corner radius
+            )));
+            craftingMenuBackground.setSize(600, 400); // Placeholder size
+            stage.addActor(craftingMenuBackground); // Add before crafting UI
+        }
+
+        // Initialize crafting navigation background
+        if (craftingNavigationBackground == null) {
+            craftingNavigationBackground = new Image(new TextureRegionDrawable(new TextureRegion(
+                    createRoundedTexture(250, 600, new Color(0.15f, 0.15f, 0.15f, 0.75f), 15) // 15px corner radius
+            )));
+            craftingNavigationBackground.setSize(250, 600); // Placeholder size
+            stage.addActor(craftingNavigationBackground); // Add before crafting navigation UI
         }
     }
 
-    private Texture createSquareTexture(int width, int height, float r, float g, float b, float a) {
+    private void createButtonStyle() {
+        TextButton.TextButtonStyle buttonStyle = new TextButton.TextButtonStyle();
+        buttonStyle.font = font;
+        buttonStyle.up = new TextureRegionDrawable(new TextureRegion(
+                createRoundedTexture(150, 50, new Color(0.6f, 0.4f, 0.2f, 1), 10) // 10px rounded corners
+        ));
+        // Apply the style to your buttons
+    }
+
+    private Texture createRoundedTexture(int width, int height, Color color, int cornerRadius) {
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        pixmap.setColor(r, g, b, a);
+        pixmap.setBlending(Pixmap.Blending.None);
+
+        // Clear the pixmap
+        pixmap.setColor(0, 0, 0, 0);
         pixmap.fill();
+
+        // Fill the rounded rectangle
+        pixmap.setColor(color);
+
+        // Draw the rounded body
+        pixmap.fillRectangle(cornerRadius, 0, width - 2 * cornerRadius, height);
+        pixmap.fillRectangle(0, cornerRadius, width, height - 2 * cornerRadius);
+
+        // Draw the four rounded corners
+        pixmap.fillCircle(cornerRadius, cornerRadius, cornerRadius);
+        pixmap.fillCircle(width - cornerRadius - 1, cornerRadius, cornerRadius);
+        pixmap.fillCircle(cornerRadius, height - cornerRadius - 1, cornerRadius);
+        pixmap.fillCircle(width - cornerRadius - 1, height - cornerRadius - 1, cornerRadius);
+
+        // Convert Pixmap to Texture
         Texture texture = new Texture(pixmap);
         pixmap.dispose();
         return texture;
     }
+
 
     private void populateInventoryUI() {
         InventoryComponent inventory = player.getComponent(InventoryComponent.class);
@@ -159,25 +192,22 @@ public class InventoryUI {
 
         inventoryTable.add(new Label("INVENTORY", labelStyle)).colspan(6).pad(10).row(); // 6 columns for inventory
 
-        // Adjust for 6 columns and 5 rows
         for (int row = 0; row < 5; row++) { // 5 rows
             for (int col = 0; col < 6; col++) { // 6 columns
                 InventoryItem item = inventory.getItem(row, col);
 
                 Stack slotStack = new Stack();
-                Image slotImage = new Image(new TextureRegionDrawable(new TextureRegion(slotTexture)));
+                Image slotImage = new Image(new TextureRegionDrawable(new TextureRegion(
+                        createRoundedTexture(64, 64, new Color(0.3f, 0.3f, 0.3f, 1), 8) // Rounded corners for slots
+                )));
                 slotStack.add(slotImage);
 
                 if (item != null) {
-                    // Add item image
                     Image itemImage = new Image(new TextureRegionDrawable(new TextureRegion(item.getTexture().texture)));
                     itemImage.setSize(48, 48);
                     slotStack.add(itemImage);
 
-                    // Add item count label
                     if (item.getQuantity() > 1) {
-                        labelStyle.font = font;
-
                         Label countLabel = new Label(String.valueOf(item.getQuantity()), labelStyle);
                         countLabel.setFontScale(1.0f);
                         countLabel.setAlignment(Align.bottomRight);
@@ -185,17 +215,18 @@ public class InventoryUI {
                     }
                 }
 
-                final int finalRow = row;
+                final int finalRow = row; // Needed for use inside the lambda
                 final int finalCol = col;
 
+                // Add listener to handle inventory clicks
                 slotStack.addListener(new ClickListener() {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
-                        handleInventoryClick(finalRow, finalCol, event);
+                        handleInventoryClick(finalRow, finalCol, event); // Call handleInventoryClick here
                     }
                 });
 
-                inventoryTable.add(slotStack).size(64, 64).pad(5); // Add to the 6-column table
+                inventoryTable.add(slotStack).size(64, 64).pad(5);
             }
             inventoryTable.row();
         }
@@ -211,7 +242,6 @@ public class InventoryUI {
 
         craftingTable.add(new Label("Crafting Menu - " + category, labelStyle)).colspan(2).pad(10).row();
 
-        // Filter recipes based on the selected category
         Map<String, Map<String, Integer>> filteredRecipes = getRecipesForCategory(category);
 
         for (Map.Entry<String, Map<String, Integer>> recipe : filteredRecipes.entrySet()) {
@@ -226,23 +256,32 @@ public class InventoryUI {
 
             Label requirementLabel = new Label(requirementText.toString(), labelStyle);
 
-            // Create button
+            // Create button with transparency for insufficient resources
             TextButton.TextButtonStyle buttonStyle = new TextButton.TextButtonStyle();
             buttonStyle.font = font;
             buttonStyle.up = new TextureRegionDrawable(new TextureRegion(buttonTexture));
 
             TextButton craftButton = new TextButton("Craft " + itemName, buttonStyle);
-            craftButton.setDisabled(!new CraftingSystem().canCraft(crafting, player.getComponent(InventoryComponent.class), itemName));
+            boolean canCraft = new CraftingSystem().canCraft(crafting, player.getComponent(InventoryComponent.class), itemName);
+            craftButton.setDisabled(!canCraft);
+
+            // Adjust button transparency based on craftability
+            if (!canCraft) {
+                craftButton.getStyle().up.setMinWidth(0.5f); // Make button semi-transparent
+            }
 
             craftButton.addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
-                    boolean crafted = new CraftingSystem().craftItem(crafting, player.getComponent(InventoryComponent.class), itemName, 1);
-                    if (crafted) {
-                        System.out.println("Crafted: " + itemName);
-                        populateInventoryUI(); // Refresh inventory
-                    } else {
-                        System.out.println("Insufficient resources for " + itemName);
+                    if (canCraft) {
+                        boolean crafted = new CraftingSystem().craftItem(crafting, player.getComponent(InventoryComponent.class), itemName, 1);
+                        if (crafted) {
+                            System.out.println("Crafted: " + itemName);
+                            setVisible(false); // Close inventory and crafting menus
+                            placementSystem.startPlacingBuilding(itemName); // Start placing the building
+                        } else {
+                            System.out.println("Insufficient resources for " + itemName);
+                        }
                     }
                 }
             });
@@ -279,7 +318,7 @@ public class InventoryUI {
                 return "Weapons";
             case "steak":
             case "healing potion":
-                return "Food/Water";
+                return "consumables";
             default:
                 return "Tools";
         }
@@ -298,7 +337,9 @@ public class InventoryUI {
         for (String category : categories) {
             TextButton.TextButtonStyle buttonStyle = new TextButton.TextButtonStyle();
             buttonStyle.font = font;
-            buttonStyle.up = new TextureRegionDrawable(new TextureRegion(navigationTexture));
+            buttonStyle.up = new TextureRegionDrawable(new TextureRegion(
+                    createRoundedTexture(200, 50, new Color(0.6f, 0.4f, 0.2f, 1), 10) // Rounded corners for buttons
+            ));
 
             TextButton categoryButton = new TextButton(category, buttonStyle);
             craftingNavigationTable.add(categoryButton).size(200, 50).pad(10).row();
@@ -306,46 +347,65 @@ public class InventoryUI {
             categoryButton.addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
-                    System.out.println("Selected category: " + category);
-                    // Logic to filter crafting items by category
+                    populateCraftingUI(category); // Populate recipes for the selected category
+                    craftingTable.setVisible(true); // Ensure crafting table becomes visible
                 }
             });
         }
-
-        craftingNavigationTable.setSize(250, Gdx.graphics.getHeight() - 200);
-        craftingNavigationTable.setPosition(50, (Gdx.graphics.getHeight() / 2f) - (craftingNavigationTable.getHeight() / 2f));
     }
 
     private void handleInventoryClick(int row, int col, InputEvent event) {
         InventoryComponent inventory = player.getComponent(InventoryComponent.class);
         InventoryItem clickedItem = inventory.getItem(row, col);
 
-        if (pickedUpItem == null) {
+        if (pickedUpItem == null) { // Picking up an item
             if (clickedItem != null) {
-                if (event.getButton() == Input.Buttons.RIGHT) {
+                // If a Building item is clicked, close the inventory and start placement
+                if (clickedItem.getItemType() == ItemType.BUILDING) {
+                    setVisible(false); // Close inventory and crafting UI
+                    placementSystem.startPlacingBuilding(clickedItem.getName()); // Start placing the building
+                    return;
+                }
+
+                if (event.getButton() == Input.Buttons.RIGHT) { // Split stack
                     int halfQuantity = clickedItem.getQuantity() / 2;
                     pickedUpItem = new InventoryItem(clickedItem.getName(), halfQuantity, clickedItem.getTexturePath(), clickedItem.getItemType());
                     clickedItem.setQuantity(clickedItem.getQuantity() - halfQuantity);
                     if (clickedItem.getQuantity() == 0) {
                         inventory.clearSlot(row, col);
                     }
-                } else {
+                } else { // Pick up the entire stack
                     pickedUpItem = clickedItem;
                     inventory.clearSlot(row, col);
                 }
-                updateDraggingItemImage();
             }
-        } else {
-            // Placement logic (updated below)
-            if (clickedItem != null && clickedItem.getItemType() == ItemType.BUILDING) {
-                placeBuilding(clickedItem, row, col);
-            } else {
-                mergeOrSwapItems(row, col, clickedItem);
+        } else { // Placing the picked-up item
+            if (row == 0 && !pickedUpItem.canPlaceInHotbar()) { // Restrict hotbar placement
+                System.out.println("Only tools and consumables can be placed in the hotbar!");
+                return;
+            }
+
+            if (clickedItem == null) { // Empty slot
+                inventory.setItem(row, col, pickedUpItem);
+                pickedUpItem = null; // Clear picked-up item
+            } else if (clickedItem.isSameType(pickedUpItem)) { // Stacking items
+                int spaceLeft = 64 - clickedItem.getQuantity(); // Assuming max stack size is 64
+                int mergeQuantity = Math.min(spaceLeft, pickedUpItem.getQuantity());
+                clickedItem.setQuantity(clickedItem.getQuantity() + mergeQuantity);
+                pickedUpItem.setQuantity(pickedUpItem.getQuantity() - mergeQuantity);
+
+                if (pickedUpItem.getQuantity() <= 0) {
+                    pickedUpItem = null; // Fully merged
+                }
+            } else { // Swapping items
+                InventoryItem temp = clickedItem;
+                inventory.setItem(row, col, pickedUpItem);
+                pickedUpItem = temp;
             }
         }
 
-        // Don't enable crafting unless explicitly toggled
-        updateUI();
+        updateUI(); // Refresh inventory and hotbar UI
+        player.notifyInventoryUpdate(); // Notify inventory update
     }
 
     private void mergeOrSwapItems(int row, int col, InventoryItem clickedItem) {
@@ -418,7 +478,8 @@ public class InventoryUI {
             Image slotFrame = new Image(brownSquareDrawable);
             slotStack.add(slotFrame);
 
-            if (item != null) {
+            // Display only tools and consumables in the hotbar
+            if (item != null && item.canPlaceInHotbar()) {
                 // Add item image
                 Image itemImage = new Image(new TextureRegionDrawable(new TextureRegion(item.getTexture().texture)));
                 itemImage.setSize(48, 48);
@@ -435,6 +496,16 @@ public class InventoryUI {
                     slotStack.add(countLabel);
                 }
             }
+
+            final int finalCol = col; // Needed for use inside the lambda
+
+            // Add listener to handle hotbar slot clicks
+            slotStack.addListener(new ClickListener() {
+                @Override
+                public void clicked(InputEvent event, float x, float y) {
+                    handleInventoryClick(0, finalCol, event); // Handle clicks for hotbar slots
+                }
+            });
 
             hotbarTable.add(slotStack).size(slotSize, slotSize).pad(padding); // Add slot to table
         }
@@ -460,6 +531,7 @@ public class InventoryUI {
                 if (existingItem == null) {
                     inventory.setItem(row, col, item);
                     inventory.clearSlot(originalRow, originalCol);
+                    updateUI(); // Refresh inventory
                     return;
                 } else if (existingItem.isSameType(item) && existingItem.getQuantity() < 64) {
                     int spaceLeft = 64 - existingItem.getQuantity();
@@ -469,6 +541,7 @@ public class InventoryUI {
 
                     if (item.getQuantity() == 0) {
                         inventory.clearSlot(originalRow, originalCol);
+                        updateUI(); // Refresh inventory
                         return;
                     }
                 }
@@ -489,53 +562,38 @@ public class InventoryUI {
         } else {
             draggingItemImage.setVisible(false);
         }
+
+        updateUI(); // Ensure the inventory reflects the changes after dragging
     }
 
 
     public void setVisible(boolean visible) {
         isVisible = visible;
 
-        if (visible) {
-            initializeUIPositions(); // Ensure elements are in the correct positions
+        // Toggle visibility of all UI elements
+        if (craftingMenuBackground != null) craftingMenuBackground.setVisible(visible);
+        if (craftingNavigationBackground != null) craftingNavigationBackground.setVisible(visible);
+        inventoryTable.setVisible(visible);
+        craftingNavigationTable.setVisible(visible);
+        craftingTable.setVisible(visible);
 
-            if (!stage.getActors().contains(backgroundImage, true)) {
-                stage.addActor(backgroundImage); // Add background first
-            }
-            stage.addActor(inventoryTable);       // Add inventory table
-            stage.addActor(craftingNavigationTable);
-            stage.addActor(craftingTable);
-            stage.addActor(hotbarGroup);          // Add hotbar group
-
-            inventoryTable.setVisible(true);
-            craftingNavigationTable.setVisible(true);
-            craftingTable.setVisible(true);
-            hotbarGroup.setVisible(true);
-        } else {
-            // Hide the UI components
-            inventoryTable.setVisible(false);
-            craftingNavigationTable.setVisible(false);
-            craftingTable.setVisible(false);
-            hotbarGroup.setVisible(false);
-
-            // Remove background
-            if (backgroundImage != null) {
-                backgroundImage.remove();
-            }
+        // Also reset dragging item when hiding the UI
+        if (!visible && pickedUpItem != null) {
+            moveToFirstAvailable(pickedUpItem, -1, -1); // Return picked-up item to the inventory
+            pickedUpItem = null;
+            updateDraggingItemImage();
         }
+        updateUI(); // Refresh UI on visibility change
     }
 
     public void updateUI() {
         if (!isVisible) return;
 
-        // Only update the contents of the UI
+        // Update contents of the UI
         populateInventoryUI();
         populateHotbarUI();
 
-        if (craftingNavigationTable.isVisible()) {
-            populateCraftingUI("Building"); // Default to "Building" category
-        }
-
-        // Reapply correct positions
+        // Update positions (ensure correct alignment)
         initializeUIPositions();
     }
 
@@ -573,35 +631,48 @@ public class InventoryUI {
     }
 
     private void initializeUIPositions() {
-        // Set inventory table position
+        // Center inventory table
         inventoryTable.setPosition(
                 (Gdx.graphics.getWidth() - inventoryTable.getWidth()) / 2f,
-                (Gdx.graphics.getHeight() - inventoryTable.getHeight()) / 2f
+                (Gdx.graphics.getHeight() - inventoryTable.getHeight()) / 2f + 20 // Centered, slightly higher
         );
 
-        // Set crafting table position
+        // Position crafting table to the right of inventory with padding
         craftingTable.setPosition(
-                (Gdx.graphics.getWidth() / 2f) + 200,
-                (Gdx.graphics.getHeight() / 2f) - (craftingTable.getHeight() / 2f)
+                inventoryTable.getX() + inventoryTable.getWidth() - 500, // 30 pixels padding
+                inventoryTable.getY() + 100
         );
 
-        // Set crafting navigation table position
+        // Position crafting navigation to the left of inventory with padding
         craftingNavigationTable.setPosition(
-                50,
-                (Gdx.graphics.getHeight() / 2f) - (craftingNavigationTable.getHeight() / 2f)
+                inventoryTable.getX() - craftingNavigationTable.getWidth() - 650, // 30 pixels padding
+                inventoryTable.getY() - 80
         );
 
-        // Set hotbar group position
-        hotbarGroup.setPosition(
-                (Gdx.graphics.getWidth() - hotbarGroup.getWidth()) / 2f,
-                20
+        // Center hotbar at the bottom
+        hotbarTable.setPosition(
+                (Gdx.graphics.getWidth() - hotbarTable.getWidth()) / 2f,
+                20 // 20 pixels from the bottom edge
         );
 
-        // Set background position and size
-        if (backgroundImage != null) {
-            backgroundImage.setPosition(0, 0);
-            backgroundImage.setSize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        }
+        // Adjust background to fit the inventory and crafting UI
+        float backgroundWidth = inventoryTable.getWidth() + craftingNavigationTable.getWidth() + craftingTable.getWidth() + 120;
+        float backgroundHeight = inventoryTable.getHeight() + 80; // Extra padding for height
+        craftingMenuBackground.setSize(backgroundWidth, backgroundHeight);
+
+        // Center background behind inventory and crafting UI
+        craftingMenuBackground.setSize(600, 500); // Adjust width/height as necessary to cover UI elements
+        craftingMenuBackground.setPosition(
+                (Gdx.graphics.getWidth() - craftingMenuBackground.getWidth()) / 2f,
+                (Gdx.graphics.getHeight() - craftingMenuBackground.getHeight()) / 2f
+        );
+
+        // Center crafting navigation background
+        craftingNavigationBackground.setSize(500, 360); // Adjust width/height as necessary to cover UI elements
+        craftingNavigationBackground.setPosition(
+                70,
+                400
+        );
     }
 
     public void toggleCraftingNavigation(boolean visible) {

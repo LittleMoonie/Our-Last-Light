@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.UUID;
 import project.project.components.Component;
 
-public class Character {
+public class Character implements Entity {
     private final UUID id;
     private final Map<Class<? extends Component>, Component> components;
     public String name;
@@ -35,7 +35,5 @@ public class Character {
     public <T extends Component> boolean hasComponent(Class<T> componentClass) {
         return components.containsKey(componentClass);
     }
-
-
 
 }

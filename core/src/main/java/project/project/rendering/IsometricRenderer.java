@@ -4,11 +4,13 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Json;
 import com.badlogic.gdx.utils.JsonValue;
 import project.project.Constants;
 import project.project.map.Biome;
 import project.project.map.MapGenerator;
+import project.project.map.MapLoader;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -16,16 +18,20 @@ import java.util.List;
 import java.util.Map;
 
 public class IsometricRenderer {
-    private byte[][] biomeMap;
-    private int[][] tileVariants;
-    private List<MapGenerator.ResourcePlacement> resources;
-
+    private final byte[][] biomeMap;
+    private final int[][] tileVariants;
+    private final List<MapGenerator.ResourcePlacement> resources;
+    private final MapLoader mapLoader;
     private Map<String, BiomeResources> biomeResources;
 
-    public IsometricRenderer(MapGenerator mapGenerator) {
+    // Taille d’un chunk
+    private static final int CHUNK_SIZE = 16; // Exemple : 16x16 tuiles
+
+    public IsometricRenderer(MapGenerator mapGenerator, MapLoader mapLoader) {
         this.biomeMap = mapGenerator.getBiomeMap();
         this.tileVariants = mapGenerator.getTileVariants();
         this.resources = mapGenerator.getResources();
+        this.mapLoader = mapLoader;
 
         loadBiomeConfig();
     }
@@ -75,9 +81,41 @@ public class IsometricRenderer {
         }
     }
 
-    public void drawGround(SpriteBatch batch) {
-        for (int row = biomeMap.length - 1; row >= 0; row--) {
-            for (int col = biomeMap[0].length - 1; col >= 0; col--) {
+public void drawGround(SpriteBatch batch, Rectangle viewBounds) {
+    for (int row = biomeMap.length - 1; row >= 0; row--) {
+        for (int col = biomeMap[0].length - 1; col >= 0; col--) {
+            float x = (col - row) * (Constants.TILE_WIDTH / 2f);
+            float y = (col + row) * (Constants.TILE_HEIGHT / 3f);
+
+            // Vérifier si la tile est dans les limites de la vue
+            if (viewBounds.contains(x, y)) {
+                String biomeName = Biome.values()[biomeMap[row][col]].name();
+                BiomeResources resources = biomeResources.get(biomeName);
+
+                if (resources != null && !resources.tiles.isEmpty()) {
+                    TextureRegion tileTexture = resources.tiles.get(tileVariants[row][col] % resources.tiles.size());
+                    batch.draw(tileTexture, x, y, Constants.TILE_WIDTH, Constants.TILE_HEIGHT);
+                }
+            }
+        }
+    }
+    drawPreplacedResources(batch, viewBounds);
+}
+
+
+    private void drawChunk(SpriteBatch batch, int chunkRow, int chunkCol) {
+        int startRow = chunkRow * CHUNK_SIZE;
+        int endRow = startRow + CHUNK_SIZE;
+
+        int startCol = chunkCol * CHUNK_SIZE;
+        int endCol = startCol + CHUNK_SIZE;
+
+        // Limiter les indices pour éviter les dépassements
+        endRow = Math.min(endRow, biomeMap.length);
+        endCol = Math.min(endCol, biomeMap[0].length);
+
+        for (int row = startRow; row < endRow; row++) {
+            for (int col = startCol; col < endCol; col++) {
                 float x = (col - row) * (Constants.TILE_WIDTH / 2f);
                 float y = (col + row) * (Constants.TILE_HEIGHT / 3f);
 
@@ -90,32 +128,34 @@ public class IsometricRenderer {
                 }
             }
         }
-        drawPreplacedResources(batch);
     }
 
-    private void drawPreplacedResources(SpriteBatch batch) {
+    private void drawPreplacedResources(SpriteBatch batch, Rectangle viewBounds) {
         for (MapGenerator.ResourcePlacement resource : resources) {
             float x = (resource.x - resource.y) * (Constants.TILE_WIDTH / 2f);
             float y = (resource.x + resource.y) * (Constants.TILE_HEIGHT / 3f);
 
-            String biomeName = Biome.values()[biomeMap[resource.x][resource.y]].name();
-            BiomeResources biomeResources = this.biomeResources.get(biomeName);
+            if (viewBounds.contains(x, y)) {
+                String biomeName = Biome.values()[biomeMap[resource.x][resource.y]].name();
+                BiomeResources biomeResources = this.biomeResources.get(biomeName);
 
-            TextureRegion resourceTexture = null;
-            if (resource.type == MapGenerator.ResourceType.TREE && !biomeResources.trees.isEmpty()) {
-                resourceTexture = biomeResources.trees.get(0);
-            } else if (resource.type == MapGenerator.ResourceType.ROCK && !biomeResources.objects.isEmpty()) {
-                resourceTexture = biomeResources.objects.get(0);
-            } else if (resource.type == MapGenerator.ResourceType.BUSH && !biomeResources.objects.isEmpty()) {
-                resourceTexture = biomeResources.objects.get(0);
-            }
+                TextureRegion resourceTexture = null;
+                if (resource.type == MapGenerator.ResourceType.TREE && !biomeResources.trees.isEmpty()) {
+                    resourceTexture = biomeResources.trees.get(0);
+                } else if (resource.type == MapGenerator.ResourceType.ROCK && !biomeResources.objects.isEmpty()) {
+                    resourceTexture = biomeResources.objects.get(0);
+                } else if (resource.type == MapGenerator.ResourceType.BUSH && !biomeResources.objects.isEmpty()) {
+                    resourceTexture = biomeResources.objects.get(0);
+                }
 
-            if (resourceTexture != null) {
-                float heightMultiplier = (resource.type == MapGenerator.ResourceType.TREE) ? 2f : 1f;
-                batch.draw(resourceTexture, x, y, Constants.TILE_WIDTH, Constants.TILE_HEIGHT * heightMultiplier);
+                if (resourceTexture != null) {
+                    float heightMultiplier = (resource.type == MapGenerator.ResourceType.TREE) ? 2f : 1f;
+                    batch.draw(resourceTexture, x, y, Constants.TILE_WIDTH, Constants.TILE_HEIGHT * heightMultiplier);
+                }
             }
         }
     }
+
 
     public void dispose() {
         for (BiomeResources resources : biomeResources.values()) {

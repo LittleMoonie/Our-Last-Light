@@ -42,6 +42,55 @@ public class ObjectPlacementSystem {
         return true;
     }
 
+    // Inside ObjectPlacementSystem class
+    private String buildingToPlace = null; // Tracks the building currently being placed
+
+    /**
+     * Starts the placement of a building after crafting.
+     *
+     * @param buildingName Name of the building to place.
+     */
+    public void startPlacingBuilding(String buildingName) {
+        this.buildingToPlace = buildingName; // Store the building name
+        System.out.println("Started placing building: " + buildingName);
+        // Optionally, you can enable a placement preview here if desired.
+    }
+
+    /**
+     * Handles placement logic when the player confirms placement.
+     *
+     * @param worldPosition The world position where the building will be placed.
+     * @return true if placement was successful, false otherwise.
+     */
+    public boolean confirmPlacement(Vector2 worldPosition) {
+        if (buildingToPlace == null) {
+            return false; // Nothing to place
+        }
+
+        Vector2 snappedPosition = snapToTile(worldPosition);
+
+        // Example: Create and place the building entity
+        project.project.entities.Character buildingEntity = new project.project.entities.Character(buildingToPlace);
+        buildingEntity.addComponent(new PlacementComponent(true, 1, 1));
+        buildingEntity.addComponent(new HitboxComponent(Constants.TILE_WIDTH, Constants.TILE_HEIGHT));
+
+        boolean placed = placeObject(null, buildingEntity, snappedPosition, false); // Null player for simplicity
+        if (placed) {
+            System.out.println("Building placed successfully: " + buildingToPlace);
+            buildingToPlace = null; // Clear placement state
+            return true;
+        } else {
+            System.out.println("Failed to place building: " + buildingToPlace);
+            return false;
+        }
+    }
+
+    /**
+     * Snaps a position to the nearest grid tile.
+     *
+     * @param position The raw position.
+     * @return Snapped position.
+     */
     public Vector2 snapToTile(Vector2 position) {
         float x = Math.round(position.x / Constants.TILE_WIDTH) * Constants.TILE_WIDTH;
         float y = Math.round(position.y / Constants.TILE_HEIGHT) * Constants.TILE_HEIGHT;

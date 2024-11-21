@@ -37,9 +37,9 @@ public class Player extends Character {
         inventorySystem.addItem(inventory, new InventoryItem("stone", 64, "stone.png", ItemType.MATERIAL));
 
         // Tools
-        inventorySystem.addItem(inventory, new InventoryItem("sword", 1, "sword.png", ItemType.WEAPON));
-        inventorySystem.addItem(inventory, new InventoryItem("pickaxe", 1, "pickaxe.png", ItemType.WEAPON));
-        inventorySystem.addItem(inventory, new InventoryItem("axe", 1, "axe.png", ItemType.WEAPON));
+        inventorySystem.addItem(inventory, new InventoryItem("sword", 1, "sword.png", ItemType.TOOL));
+        inventorySystem.addItem(inventory, new InventoryItem("pickaxe", 1, "pickaxe.png", ItemType.TOOL));
+        inventorySystem.addItem(inventory, new InventoryItem("axe", 1, "axe.png", ItemType.TOOL));
 
         // Consumables
         inventorySystem.addItem(inventory, new InventoryItem("healing potion", 5, "healing_potion.png", ItemType.CONSUMABLE));
