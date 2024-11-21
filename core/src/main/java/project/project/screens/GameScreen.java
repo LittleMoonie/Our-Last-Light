@@ -8,6 +8,8 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.scenes.scene2d.Stage;
+import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import project.project.Constants;
 import project.project.components.TextureComponent;
 import project.project.map.Biome;
@@ -17,8 +19,7 @@ import project.project.entities.Player;
 import project.project.systems.MovementSystem;
 import project.project.systems.RenderSystem;
 import project.project.ui.HUD;
-
-import static project.project.utils.CoordinateUtils.worldToTile;
+import project.project.ui.InventoryUI;
 
 public class GameScreen implements Screen {
     private SpriteBatch batch;
@@ -30,6 +31,9 @@ public class GameScreen implements Screen {
     private MapGenerator mapGenerator;
     private MovementSystem movementSystem;
     private RenderSystem renderSystem;
+    private InventoryUI inventoryUI;
+    private Stage stage;
+    private boolean isInventoryOpen = false; // Track inventory state
 
     public GameScreen(SpriteBatch batch) {
         this.batch = batch;
@@ -59,15 +63,26 @@ public class GameScreen implements Screen {
         this.font = new BitmapFont();
     }
 
-
     @Override
+    public void show() {
+        stage = new Stage(new ScreenViewport());
+        Gdx.input.setInputProcessor(stage); // Redirect input to stage
+
+        // Initialize the inventory UI
+        inventoryUI = new InventoryUI(stage, player);
+        inventoryUI.setVisible(false); // Start with the inventory hidden
+    }
+
     public void render(float delta) {
+        // Ensure the hotbar and inventory are correctly positioned
+        resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         handleInput(delta);
 
-        // Update the camera to follow the player
+        // Update camera
         centerCameraOnPlayer();
 
         // Render the game world
@@ -77,14 +92,23 @@ public class GameScreen implements Screen {
         renderSystem.update(delta); // Render entities
         batch.end();
 
-        // Render the HUD
+        // Render HUD and Inventory
         hud.update();
         hud.render();
+
+        stage.act(delta);
+        stage.draw();
     }
 
     private void handleInput(float delta) {
         // Update player movement
         movementSystem.update(delta, player);
+
+        // Toggle inventory with "E"
+        if (Gdx.input.isKeyJustPressed(Input.Keys.E)) {
+            isInventoryOpen = !isInventoryOpen;
+            inventoryUI.setVisible(isInventoryOpen); // Show or hide the inventory
+        }
 
         // Handle camera zoom
         if (Gdx.input.isKeyPressed(Input.Keys.Z)) {
@@ -109,6 +133,12 @@ public class GameScreen implements Screen {
         camera.viewportWidth = width;
         camera.viewportHeight = height;
         camera.update();
+
+        // Update the stage viewport
+        stage.getViewport().update(width, height, true);
+
+        // Resize UI elements
+        inventoryUI.resize(width, height);
     }
 
     @Override
@@ -118,6 +148,7 @@ public class GameScreen implements Screen {
         hud.dispose();
         renderer.dispose();
         font.dispose();
+        stage.dispose(); // Dispose the stage
     }
 
     @Override
@@ -128,9 +159,4 @@ public class GameScreen implements Screen {
 
     @Override
     public void hide() {}
-
-    @Override
-    public void show() {
-        // Optional: Debug information or initialization logic if needed
-    }
 }

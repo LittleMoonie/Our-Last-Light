@@ -1,4 +1,8 @@
 package project.project.entities;
 
-public class ItemType {
+public enum ItemType {
+    WEAPON,
+    CONSUMABLE,
+    MATERIAL,
+    BUILDING
 }
