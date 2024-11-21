@@ -12,7 +12,7 @@ public class Player extends Character {
         addComponent(this.position);
         addComponent(new TextureComponent("player1.png", 50, 70));
         addComponent(new HealthComponent(100));
-        addComponent(new MovementComponent(2));
+        addComponent(new MovementComponent(0.5f));
     }
 
     public Vector2 getWorldPosition() {

@@ -12,6 +12,17 @@ public class TextureComponent implements Component {
         this.width = width;
         this.height = height;
     }
+    public Texture getTexture() {
+        return texture;
+    }
+
+    public float getWidth() {
+        return width;
+    }
+
+    public float getHeight() {
+        return height;
+    }
 
     public void dispose() {
         texture.dispose();

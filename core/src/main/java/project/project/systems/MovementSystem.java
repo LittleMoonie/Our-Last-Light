@@ -9,76 +9,71 @@ import project.project.entities.Character;
 import project.project.entities.Player;
 
 public class MovementSystem {
-    public void update(float delta, Character player) {
-        PositionComponent position = player.getComponent(PositionComponent.class);
-        MovementComponent movement = player.getComponent(MovementComponent.class);
+
+    public void update(float delta, Character character) {
+        // Récupérer les composants nécessaires
+        PositionComponent position = character.getComponent(PositionComponent.class);
+        MovementComponent movement = character.getComponent(MovementComponent.class);
 
         if (position != null && movement != null) {
-            move(position, movement.speed * delta, (Player) player);
+            // Calculer le déplacement
+            Vector2 movementVector = handleInput();
+            if (!movementVector.isZero()) {
+                // Normaliser pour éviter un mouvement plus rapide en diagonale
+                movementVector.nor().scl(movement.speed * delta);
+                // Appliquer le mouvement
+                move(position, movementVector);
+                // Synchroniser la position du joueur
+                if (character instanceof Player) {
+                    syncWorldPosition(position, (Player) character);
+                }
+            }
         }
     }
 
-//    private void move(PositionComponent position, float speed, Player player) {
-//        boolean moved = false;
-//        float deltaX = 0, deltaY = 0;
-//
-//        if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-//            deltaY += speed;
-//            moved = true;
-//        }
-//        if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-//            deltaY -= speed;
-//            moved = true;
-//        }
-//        if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-//            deltaX -= speed;
-//            moved = true;
-//        }
-//        if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-//            deltaX += speed;
-//            moved = true;
-//        }
-//
-//        if (moved) {
-//            // Utilise setTilePosition pour gérer automatiquement la conversion
-//            position.setTilePosition(
-//                position.tilePos.x + deltaX,
-//                position.tilePos.y + deltaY
-//            );
-//
-//            // Synchronise la position du joueur
-//            player.setWorldPosition(position.worldPos.x, position.worldPos.y);
-//        }
-//    }
-
-
-    private void move(PositionComponent position, float speed, Player player) {
-        float deltaX = 0, deltaY = 0;
+    /**
+     * Gère les entrées clavier pour générer un vecteur directionnel.
+     */
+    private Vector2 handleInput() {
+        Vector2 movementVector = new Vector2();
 
         if (Gdx.input.isKeyPressed(Input.Keys.W)) {
-            deltaY += 1;
+            movementVector.y += 1;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.S)) {
-            deltaY -= 1;
+            movementVector.y -= 1;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            deltaX -= 1;
+            movementVector.x -= 1;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.D)) {
-            deltaX += 1;
+            movementVector.x += 1;
+        }
+        // Rotate the movement vector by 45 degrees
+        if (!movementVector.isZero()) {
+            movementVector.rotateDeg(-45);
         }
 
-        if (deltaX != 0 || deltaY != 0) {
-            Vector2 movement = new Vector2(deltaX, deltaY).nor().scl(speed);
+        return movementVector;
+    }
 
-            // Update tile position
-            position.setTilePosition(
-                position.tilePos.x + movement.x,
-                position.tilePos.y + movement.y
-            );
+    /**
+     * Met à jour la position sur les tuiles et synchronise avec les coordonnées mondiales.
+     */
+    private void move(PositionComponent position, Vector2 movement) {
+        // Mettre à jour la position des tuiles
+        position.setTilePosition(
+            position.tilePos.x + movement.x,
+            position.tilePos.y + movement.y
+        );
+        // Optionnel : recalculer `worldPos` si nécessaire ici
 
-            // Synchronize the world position
-            player.setWorldPosition(position.worldPos.x, position.worldPos.y);
-        }
+    }
+
+    /**
+     * Synchronise la position mondiale avec la position des tuiles.
+     */
+    private void syncWorldPosition(PositionComponent position, Player player) {
+        player.setWorldPosition(position.worldPos.x, position.worldPos.y);
     }
 }

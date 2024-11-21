@@ -1,3 +1,4 @@
+// GameScreen.java
 package project.project.screens;
 
 import com.badlogic.gdx.Gdx;
@@ -7,101 +8,154 @@ import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
 import project.project.Constants;
 import project.project.components.TextureComponent;
-import project.project.map.Biome;
+import project.project.map.MapLoader;
 import project.project.rendering.IsometricRenderer;
 import project.project.map.MapGenerator;
 import project.project.entities.Player;
 import project.project.systems.MovementSystem;
 import project.project.systems.RenderSystem;
 import project.project.ui.HUD;
+import project.project.utils.CoordinateUtils;
 
-import static project.project.utils.CoordinateUtils.worldToTile;
+import static project.project.Constants.MAP_HEIGHT;
+import static project.project.Constants.MAP_WIDTH;
 
 public class GameScreen implements Screen {
-    private SpriteBatch batch;
-    private OrthographicCamera camera; // World camera
-    private IsometricRenderer renderer;
-    private Player player;
-    private BitmapFont font;
-    private HUD hud;
-    private MapGenerator mapGenerator;
-    private MovementSystem movementSystem;
-    private RenderSystem renderSystem;
+    private final SpriteBatch batch;
+    private final OrthographicCamera camera;
+    private final IsometricRenderer renderer;
+    private final Player player;
+    private final BitmapFont font;
+    private final HUD hud;
+    private final MapLoader mapLoader;
+    private final MovementSystem movementSystem;
+    private final RenderSystem renderSystem;
 
     public GameScreen(SpriteBatch batch) {
         this.batch = batch;
 
-        // Initialize map generator and renderer
-        this.mapGenerator = new MapGenerator(Constants.MAP_WIDTH, Constants.MAP_HEIGHT);
-        this.renderer = new IsometricRenderer(mapGenerator);
 
-        // Initialize camera
+        // Map generator and renderer
+        MapGenerator mapGenerator = new MapGenerator(MAP_WIDTH, MAP_HEIGHT);
+        this.mapLoader = new MapLoader(mapGenerator);
+        this.renderer = new IsometricRenderer(mapGenerator, mapLoader);
+        float centerX = MAP_WIDTH / 2f;
+        float centerY = MAP_HEIGHT / 2f;
+
+        // Convert isometric center to world coordinates
+        Vector2 centerWorldPos = isoToWorld(centerX, centerY);
+        player = new Player(new Vector2(centerX, centerY));
+        player.setWorldPosition(centerWorldPos.x, centerWorldPos.y);
+
+        // Camera setup
         this.camera = new OrthographicCamera(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         this.camera.zoom = Constants.INITIAL_ZOOM;
+        smoothCameraFollow();
         this.camera.update();
 
-        // Initialize player
-        Vector2 initialTile = new Vector2(Constants.MAP_WIDTH / 2f, Constants.MAP_HEIGHT / 2f);
-        this.player = new Player(initialTile);
-
-        // Initialize HUD
+        // HUD and systems
         this.hud = new HUD(batch, player);
-
-        // Initialize systems
         this.movementSystem = new MovementSystem();
-        this.renderSystem = new RenderSystem(batch);
+        this.renderSystem = new RenderSystem(batch, camera);
         renderSystem.addEntity(player);
 
-        // Initialize font for debug UI
+        // Font for debug UI
         this.font = new BitmapFont();
-    }
 
+        int totalChunks = mapLoader.getTotalChunks();
+        System.out.println("Total number of chunks: " + totalChunks);
+    }
 
     @Override
     public void render(float delta) {
+        // Clear screen
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
+        // Handle input
         handleInput(delta);
 
-        // Update the camera to follow the player
-        centerCameraOnPlayer();
 
-        // Render the game world
+
+
+
+        // Update player position smoothly
+        movementSystem.update(delta, player);
+
+        // Interpolate camera to follow the player smoothly
+        smoothCameraFollow();
+
+        // Update chunks based on camera position
+        Vector2 cameraCenter = new Vector2(camera.position.x, camera.position.y);
+        mapLoader.update(cameraCenter.x, cameraCenter.y);
+
+        // Render game world
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        renderer.drawGround(batch);
-        renderSystem.update(delta); // Render entities
+
+
+        // Calculer les limites visibles en fonction du zoom de la caméra
+        float scaledViewportWidth = camera.viewportWidth * camera.zoom;
+        float scaledViewportHeight = camera.viewportHeight * camera.zoom;
+
+        // Ajouter deux tuiles de marge de chaque côté
+        float tileWidth = Constants.TILE_WIDTH;   // Largeur d'une tuile
+        float tileHeight = Constants.TILE_HEIGHT; // Hauteur d'une tuile
+
+        // Calculer les dimensions étendues
+        float extendedWidth = scaledViewportWidth + tileWidth * 2;
+        float extendedHeight = scaledViewportHeight + tileHeight * 2;
+
+        // Définir les limites visibles étendues comme un rectangle
+        Rectangle viewBounds = new Rectangle(
+            camera.position.x - extendedWidth / 2,
+            camera.position.y - extendedHeight / 2,
+            extendedWidth,
+            extendedHeight
+        );
+
+        // Appeler la méthode drawGround avec les paramètres corrects
+        renderer.drawGround(batch, viewBounds);
+        renderSystem.update(delta); // Ensure this does not call batch.begin() again
         batch.end();
 
-        // Render the HUD
+        // Render HUD
         hud.update();
         hud.render();
     }
 
+    private void smoothCameraFollow() {
+        Vector2 playerWorldPosition = player.getWorldPosition();
+
+        // Interpoler la position de la caméra pour un suivi fluide
+        float lerp = 0.05f; // Valeur d'interpolation (0 = pas de mouvement, 1 = mouvement instantané)
+        camera.position.set(playerWorldPosition.x, playerWorldPosition.y, 0);
+        camera.update();
+    }
+
     private void handleInput(float delta) {
-        // Update player movement
+        // Handle player movement
         movementSystem.update(delta, player);
 
         // Handle camera zoom
         if (Gdx.input.isKeyPressed(Input.Keys.Z)) {
-            camera.zoom -= Constants.ZOOM_SPEED * delta * 60;
+            camera.zoom -= Constants.ZOOM_SPEED * delta * 10;
             camera.zoom = Math.max(Constants.MIN_ZOOM, camera.zoom);
         }
         if (Gdx.input.isKeyPressed(Input.Keys.X)) {
-            camera.zoom += Constants.ZOOM_SPEED * delta * 60;
+            camera.zoom += Constants.ZOOM_SPEED * delta * 10;
             camera.zoom = Math.min(Constants.MAX_ZOOM, camera.zoom);
         }
         camera.update();
     }
 
-    private void centerCameraOnPlayer() {
-        Vector2 playerWorldPosition = player.getWorldPosition();
-        camera.position.set(playerWorldPosition.x, playerWorldPosition.y, 0);
-        camera.update();
+    private Vector2 isoToWorld(float tileX, float tileY) {
+        // Correct conversion from isometric to world coordinates
+        return CoordinateUtils.tileToWorld(tileX, tileY);
     }
 
     @Override
@@ -118,6 +172,7 @@ public class GameScreen implements Screen {
         hud.dispose();
         renderer.dispose();
         font.dispose();
+        mapLoader.dispose();
     }
 
     @Override
@@ -130,7 +185,5 @@ public class GameScreen implements Screen {
     public void hide() {}
 
     @Override
-    public void show() {
-        // Optional: Debug information or initialization logic if needed
-    }
+    public void show() {}
 }
