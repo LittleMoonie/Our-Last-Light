@@ -35,7 +35,7 @@ public class HUD {
 
     private void updateHearts() {
         table.clear();
-        int health = player.getComponent(HealthComponent.class).getHealth();
+        int health = player.getComponent(HealthComponent.class).getCurrentHealth();
         int numFullHearts = health / 20;
         int remainingHealth = health % 20;
 

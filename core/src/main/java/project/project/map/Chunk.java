@@ -41,7 +41,7 @@ public class Chunk {
         Chunk newChunk = new Chunk(chunkX, chunkY, chunkSize);
         newChunk.loadChunk(chunkX * chunkSize, chunkY * chunkSize, biomeMap);
         loadedChunks.add(newChunk);
-        System.out.println("Chunk added at: (" + chunkX + ", " + chunkY + ")");
+//        System.out.println("Chunk added at: (" + chunkX + ", " + chunkY + ")");
     }
 
     public static void unloadInvisibleChunks(List<Chunk> loadedChunks, int startX, int endX, int startY, int endY) {

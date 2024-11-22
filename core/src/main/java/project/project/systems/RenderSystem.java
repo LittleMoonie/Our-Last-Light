@@ -3,11 +3,12 @@ package project.project.systems;
 
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import project.project.entities.Character;
 import project.project.entities.Entity;
 import project.project.entities.Player;
 import project.project.components.PositionComponent;
 import project.project.components.TextureComponent;
+import project.project.entities.Character;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,19 +28,40 @@ public class RenderSystem {
         entities.add(entity);
     }
 
-    public void update(float delta) {
+    public void update(float deltaTime, List<Entity> entities) {
+//        batch.begin(); // Démarre le dessin
+
         for (Entity entity : entities) {
-            if (entity instanceof Character) {
-                Character character = (Character) entity;
+            if (entity instanceof Character character) {
+
                 PositionComponent position = character.getComponent(PositionComponent.class);
                 TextureComponent texture = character.getComponent(TextureComponent.class);
 
                 if (position != null && texture != null) {
                     batch.draw(texture.getTexture(), position.worldPos.x, position.worldPos.y, texture.getWidth(), texture.getHeight());
+
                 }
             }
         }
+
+//        batch.end(); // Termine le dessin
     }
+//
+//    public void update(float delta) {
+//        for (Entity entity : entities) {
+//            if (entity instanceof Character) {
+//                Character character = (Character) entity;
+//                PositionComponent position = character.getComponent(PositionComponent.class);
+//                TextureComponent texture = character.getComponent(TextureComponent.class);
+//
+//                if (position != null && texture != null) {
+//                    batch.draw(texture.getTexture(), position.worldPos.x, position.worldPos.y, texture.getWidth(), texture.getHeight());
+//                }
+//            }
+//        }
+//    }
+
+
 
 //    private void renderEntity(Entity entity) {
 //        if (entity instanceof Player) {

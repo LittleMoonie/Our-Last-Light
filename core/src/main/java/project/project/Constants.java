@@ -4,8 +4,8 @@ package project.project;
 public class Constants {
 
     // Map dimensions
-    public static final int MAP_WIDTH = 1000; // Reduced for testing
-    public static final int MAP_HEIGHT = 1000; // Reduced for testing
+    public static final int MAP_WIDTH = 50; // Reduced for testing
+    public static final int MAP_HEIGHT = 50; // Reduced for testing
 
     // Biome generation settings
     public static final double BIOME_NOISE_SCALE = 0.005; // Adjust to control biome size

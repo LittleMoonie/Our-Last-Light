@@ -182,4 +182,8 @@ public class Player extends Character {
         return inventory;
     }
 
+
+    public Vector2 getPosition() {
+        return position.worldPos;
+    }
 }
