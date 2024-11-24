@@ -28,7 +28,12 @@ public class Character implements Entity {
         components.put(component.getClass(), component);
     }
 
-    public <T extends Component> T getComponent(Class<T> componentClass) {
+//    @Override
+//    public <T extends Component> T getComponent(Class<T> componentClass) {
+//        return componentClass.cast(components.get(componentClass));
+//    }
+
+    public <T> T getComponent(Class<T> componentClass) {
         return componentClass.cast(components.get(componentClass));
     }
 

@@ -33,6 +33,12 @@
 //}
 
 //
+
+//import project.project.entities.Player;
+//import project.project.entities.enemies.Mob;
+//
+//import java.util.Collections;
+
 //// WaveSystem.java
 //package project.project.systems;
 //
@@ -153,3 +159,47 @@
 //        System.out.println("Wave " + currentWave + " started with " + totalMobsToSpawn + " mobs!");
 //    }
 //}
+
+//package project.project.systems;
+//
+//
+//import com.badlogic.gdx.math.Vector2;
+//import project.project.entities.enemies.Mob;
+//
+//import java.util.ArrayList;
+//import java.util.List;
+//
+//public class WaveSystem {
+//
+//    private List<Mob> currentWaveMobs = new ArrayList<>();
+//    private int currentWave = 0;
+//
+//    public void spawnWave(int waveNumber) {
+//        currentWaveMobs.clear();  // Vider la liste des mobs précédents
+//
+//        // Exemple : Création des mobs pour la vague
+//        for (int i = 0; i < waveNumber * 2; i++) {  // Par exemple, plus de mobs dans les vagues suivantes
+//            Mob mob = new Mob(); // Créer un mob
+//            mob.setPosition(new Vector2(randomX(), randomY())); // Positionner le mob
+//            currentWaveMobs.add(mob);
+//        }
+//    }
+//
+//    public void update(float delta, Player player) {
+//        // Met à jour la logique de mouvement/attaque pour chaque mob dans la vague
+//        for (Mob mob : currentWaveMobs) {
+//            if (mob.isAlive()) {
+//                mob.update(delta, player.getWorldPosition()); // Faire bouger les mobs vers le joueur
+//                if (mob.isInAttackRange(player)) {
+//                    player.attack(Collections.singletonList(mob));  // Attaque le joueur si dans la portée
+//                }
+//            }
+//        }
+//    }
+//
+//    public void nextWave() {
+//        currentWave++;
+//        spawnWave(currentWave);  // Passer à la vague suivante
+//    }
+//}
+

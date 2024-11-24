@@ -1,37 +1,25 @@
 package project.project.screens;
 
-import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input;
-import com.badlogic.gdx.Screen;
-import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.math.Rectangle;
-import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.*;
+import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.*;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import project.project.Constants;
-import project.project.components.TextureComponent;
-import project.project.entities.Entity;
-import project.project.map.MapLoader;
-import project.project.rendering.IsometricRenderer;
-import project.project.map.MapGenerator;
-import project.project.entities.Player;
+import project.project.components.*;
+import project.project.entities.*;
 import project.project.entities.enemies.Mob;
-import project.project.systems.MobSpawnSystem;
-import project.project.systems.MovementSystem;
-import project.project.systems.ObjectPlacementSystem;
-import project.project.systems.RenderSystem;
-import project.project.ui.HUD;
-import project.project.ui.InventoryUI;
-import project.project.utils.CoordinateUtils;
+import project.project.map.*;
+import project.project.rendering.IsometricRenderer;
+import project.project.systems.*;
+import project.project.ui.*;
+import project.project.utils.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-import static project.project.Constants.MAP_HEIGHT;
-import static project.project.Constants.MAP_WIDTH;
+import static project.project.Constants.*;
 
 public class GameScreen implements Screen {
     private SpriteBatch batch;
@@ -49,9 +37,15 @@ public class GameScreen implements Screen {
     private ObjectPlacementSystem placementSystem;
     private final MapLoader mapLoader;
     private MobSpawnSystem mobSpawnSystem;
+    private AttackSystem attackSystem; // Ajout de l'AttackSystem
+    private ShapeRenderer shapeRenderer; // Ajout de ShapeRenderer pour dessiner les zones d'attaque
+    private Rectangle attackRangeRectangle; // Rectangle pour la zone d'attaque
+    private float attackRangeDuration = 0.2f; // Durée d'affichage du rectangle d'attaque
+    private float attackRangeTimer = 0f; // Timer pour suivre la durée d'affichage du rectangle d'attaque
 
     public GameScreen(SpriteBatch batch) {
         this.batch = batch;
+        shapeRenderer = new ShapeRenderer(); // Initialisation de ShapeRenderer
         mapGenerator = new MapGenerator(MAP_WIDTH, MAP_HEIGHT);
         mobSpawnSystem = new MobSpawnSystem();
         mapLoader = new MapLoader(mapGenerator);
@@ -71,6 +65,7 @@ public class GameScreen implements Screen {
         placementSystem = new ObjectPlacementSystem();
         movementSystem = new MovementSystem();
         renderSystem = new RenderSystem(batch, camera);
+        attackSystem = new AttackSystem(); // Initialisation de l'AttackSystem
 
         stage = new Stage(new ScreenViewport());
         Gdx.input.setInputProcessor(stage);
@@ -81,7 +76,7 @@ public class GameScreen implements Screen {
         font = new BitmapFont();
 
         Vector2 playerPosition = player.getWorldPosition();
-        mobSpawnSystem.spawnMob(playerPosition);
+        mobSpawnSystem.spawnMobs(playerPosition, 15);
     }
 
     @Override
@@ -94,11 +89,10 @@ public class GameScreen implements Screen {
 
         Vector2 playerPosition = player.getWorldPosition();
 
-        // Spawn mobs and add them to the render system
-        mobSpawnSystem.spawnMob(playerPosition);
+        // Ajouter les mobs au RenderSystem
         List<Mob> mobs = mobSpawnSystem.getMobs();
         for (Mob mob : mobs) {
-            renderSystem.addEntity(mob); // Add each mob to the RenderSystem
+            renderSystem.addEntity(mob);
             System.out.println("Mob added to RenderSystem: " + mob.getWorldPosition());
         }
     }
@@ -115,7 +109,6 @@ public class GameScreen implements Screen {
 
         Vector2 cameraCenter = new Vector2(camera.position.x, camera.position.y);
         mapLoader.update(cameraCenter.x, cameraCenter.y);
-
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
@@ -130,25 +123,34 @@ public class GameScreen implements Screen {
 
         renderer.drawGround(batch, viewBounds);
 
-        List<Entity> entities = new ArrayList<>();
-        entities.add(player);
+        List<Entity> visibleEntities = new ArrayList<>();
+        visibleEntities.add(player);
 
+
+        List<Mob> mobsInView = new ArrayList<>();
         for (Mob mob : mobSpawnSystem.getMobs()) {
             if (isWithinCameraView(mob.getWorldPosition(), camera)) {
-            System.out.println("Mob position: " + mob.getWorldPosition());
-            System.out.println("Player position: " + player.getWorldPosition());
-
-                mob.render(batch);
+                mob.render(batch,shapeRenderer); // Dessine le mob avec ShapeRenderer
                 mob.update(delta, player.getWorldPosition());
-            } else {
-                System.out.println("Mob out of view: " + mob.getWorldPosition());
+                mobsInView.add(mob);
+                visibleEntities.add(mob);
             }
         }
+        // afficher les mobs de la liste mobsInView
+        System.out.println("Mobs in view: " + mobsInView.size());
 
-        renderSystem.update(delta, entities);
+        if (isAttackKeyPressed()) {
+            player.attack(mobsInView); // Attaque les entités proches.
+            shapeRenderer.end();
+        }
+
+        renderSystem.update(delta, visibleEntities);
 
         batch.end();
 
+        renderCollisions(player, mobsInView);
+
+        mobSpawnSystem.updateMobs(delta);
         hud.update();
         hud.render();
         stage.act(delta);
@@ -166,10 +168,9 @@ public class GameScreen implements Screen {
 
     private void smoothCameraFollow() {
         Vector2 playerWorldPosition = player.getWorldPosition();
-
-        float lerp = 0.05f;
         camera.position.set(playerWorldPosition.x, playerWorldPosition.y, 0);
         camera.update();
+
     }
 
     private void handleInput(float delta) {
@@ -188,8 +189,106 @@ public class GameScreen implements Screen {
             camera.zoom += Constants.ZOOM_SPEED * delta * 10;
             camera.zoom = Math.min(Constants.MAX_ZOOM, camera.zoom);
         }
+
+        // Gestion des attaques au clic de la souris
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+            Vector2 mousePos = new Vector2(Gdx.input.getX(), Gdx.input.getY());
+            Vector3 worldPos = camera.unproject(new Vector3(mousePos.x, mousePos.y, 0)); // Utilisation de Vector3
+
+            // Créer un grand rectangle autour de la position de la souris
+            float rectangleSize = 2.0f; // Taille du rectangle d'attaque
+            attackRangeRectangle = new Rectangle(
+                worldPos.x - rectangleSize / 2,
+                worldPos.y - rectangleSize / 2,
+                rectangleSize,
+                rectangleSize
+            );
+
+            // Réinitialiser le timer pour afficher le rectangle
+            attackRangeTimer = 0f;
+
+            // Vérifier si un Mob est dans la zone d'attaque
+            List<Mob> mobs = mobSpawnSystem.getMobs();
+            List<Entity> entities = new ArrayList<>(); // Define entities
+            entities.add(player);
+            entities.addAll(mobs);
+
+            for (Mob mob : mobs) {
+                PositionComponent mobPosition = mob.getComponent(PositionComponent.class);
+                if (mobPosition != null && attackRangeRectangle.contains(mobPosition.worldPos)) {
+                    attackSystem.handleAttack(player, entities);
+                    break;
+                }
+            }
+        }
+
         camera.update();
     }
+
+    private boolean isAttackKeyPressed() {
+        // barre d'espace pour attaque et le mettre a false pour ne pas attaquer en continue
+        return Gdx.input.isKeyJustPressed(Input.Keys.SPACE);
+    }
+
+    private void drawAttackRanges(float delta) {
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+
+        // Dessiner la zone d'attaque du Player en rouge si un rectangle est défini
+        if (attackRangeRectangle != null) {
+            attackRangeTimer += delta;
+            if (attackRangeTimer < attackRangeDuration) {
+                shapeRenderer.setColor(Color.RED);
+                shapeRenderer.rect(attackRangeRectangle.x, attackRangeRectangle.y, attackRangeRectangle.width, attackRangeRectangle.height);
+            } else {
+                attackRangeRectangle = null; // Réinitialiser le rectangle après la durée
+            }
+        }
+
+        shapeRenderer.end();
+    }
+
+
+    private void renderCollisions(Player player, List<Mob> mobs) {
+        shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+
+        // Récupère la position du joueur
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+        HitboxComponent playerHitbox = player.getComponent(HitboxComponent.class);
+        if (playerPosition != null && playerHitbox != null) {
+            shapeRenderer.setColor(Color.GREEN);
+            shapeRenderer.rect(
+                playerPosition.worldPos.x, playerPosition.worldPos.y,
+                playerHitbox.width, playerHitbox.height
+            );
+        } else {
+            if (playerPosition == null) {
+                System.out.println("Player PositionComponent not found");
+            }
+            if (playerHitbox == null) {
+                System.out.println("Player HitboxComponent not found");
+            }
+        }
+
+        // Itération sur les mobs
+        for (Mob mob : mobs) {
+            // Utilise la méthode getHitboxRectangle() pour récupérer la hitbox correcte du mob
+            Rectangle mobHitbox = mob.getHitboxRectangle();
+
+            if (mobHitbox != null) {
+                shapeRenderer.setColor(Color.BLUE);
+                shapeRenderer.rect(
+                    mobHitbox.x, mobHitbox.y, // Utilisation des coordonnées de la hitbox
+                    mobHitbox.width, mobHitbox.height
+                );
+            } else {
+                System.out.println("Mob Hitbox is null");
+            }
+        }
+        shapeRenderer.end();
+    }
+
 
     private Vector2 isoToWorld(float tileX, float tileY) {
         return CoordinateUtils.tileToWorld(tileX, tileY);
@@ -215,6 +314,7 @@ public class GameScreen implements Screen {
         font.dispose();
         stage.dispose();
         mapLoader.dispose();
+        shapeRenderer.dispose(); // Dispose de ShapeRenderer
     }
 
     @Override

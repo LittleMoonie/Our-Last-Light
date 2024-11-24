@@ -39,4 +39,13 @@ public class PositionComponent implements Component {
             worldPos.x / (Constants.TILE_WIDTH / 2f)) / 2f;
         return new Vector2(tileX, tileY);
     }
+
+    public Vector2 getWorldPosition() {
+        return worldPos;
+    }
+
+    public void add(Vector2 scl) {
+        this.tilePos.add(scl);
+        this.worldPos = tileToWorld(tilePos);
+    }
 }
