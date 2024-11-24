@@ -10,10 +10,13 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import project.project.Constants;
+import project.project.components.PositionComponent;
 import project.project.components.TextureComponent;
+import project.project.entities.Character;
 import project.project.map.MapLoader;
 import project.project.rendering.IsometricRenderer;
 import project.project.map.MapGenerator;
@@ -70,12 +73,12 @@ public class GameScreen implements Screen {
         // HUD and systems
         this.hud = new HUD(batch, player);
 
-        // Initialize systems
-        this.placementSystem = new ObjectPlacementSystem();
+        // Pass the render system to the placement system
+        this.renderSystem = new RenderSystem(batch, camera);
+        this.placementSystem = new ObjectPlacementSystem(renderSystem);
 
         // Add the player to the render system
         this.movementSystem = new MovementSystem();
-        this.renderSystem = new RenderSystem(batch, camera);
         renderSystem.addEntity(player);
 
         // Initialize stage
@@ -87,9 +90,6 @@ public class GameScreen implements Screen {
         inventoryUI.setVisible(false); // Start with the inventory hidden
         // Font for debug UI
         this.font = new BitmapFont();
-
-        int totalChunks = mapLoader.getTotalChunks();
-        System.out.println("Total number of chunks: " + totalChunks);
     }
 
     @Override
@@ -104,11 +104,6 @@ public class GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        // Ensure systems are initialized
-        if (renderSystem == null) {
-            throw new IllegalStateException("RenderSystem is not initialized!");
-        }
-
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -129,20 +124,16 @@ public class GameScreen implements Screen {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-
-        // Calculer les limites visibles en fonction du zoom de la caméra
+        // Calculate visible bounds based on camera zoom
         float scaledViewportWidth = camera.viewportWidth * camera.zoom;
         float scaledViewportHeight = camera.viewportHeight * camera.zoom;
 
-        // Ajouter deux tuiles de marge de chaque côté
-        float tileWidth = Constants.TILE_WIDTH;   // Largeur d'une tuile
-        float tileHeight = Constants.TILE_HEIGHT; // Hauteur d'une tuile
+        float tileWidth = Constants.TILE_WIDTH;
+        float tileHeight = Constants.TILE_HEIGHT;
 
-        // Calculer les dimensions étendues
         float extendedWidth = scaledViewportWidth + tileWidth * 2;
         float extendedHeight = scaledViewportHeight + tileHeight * 2;
 
-        // Définir les limites visibles étendues comme un rectangle
         Rectangle viewBounds = new Rectangle(
             camera.position.x - extendedWidth / 2,
             camera.position.y - extendedHeight / 2,
@@ -150,9 +141,25 @@ public class GameScreen implements Screen {
             extendedHeight
         );
 
-        // Appeler la méthode drawGround avec les paramètres corrects
+        // Placement mode logic
+        if (placementSystem.isPlacingObject()) {
+            Vector2 mousePos = new Vector2(Gdx.input.getX(), Gdx.input.getY());
+
+            // Unproject the mouse position from screen coordinates to world coordinates
+            Vector3 worldPos3D = camera.unproject(new Vector3(mousePos.x, mousePos.y, 0));
+            Vector2 worldPos = new Vector2(worldPos3D.x, worldPos3D.y);
+
+            placementSystem.updatePlacement(worldPos);
+
+            // Confirm placement on left click
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) {
+                boolean placed = placementSystem.confirmPlacement(worldPos);
+            }
+        }
+
+        // Draw ground and entities
         renderer.drawGround(batch, viewBounds);
-        renderSystem.update(delta); // Ensure this does not call batch.begin() again
+        renderSystem.update(delta);
         batch.end();
 
         // Render HUD and UI

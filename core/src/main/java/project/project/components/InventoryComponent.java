@@ -66,4 +66,28 @@ public class InventoryComponent implements Component {
         }
         return false;
     }
+
+    /**
+     * Finds an item in the inventory by its name.
+     *
+     * @param itemName The name of the item to search for.
+     * @return The InventoryItem if found, or null if not found.
+     */
+    /**
+     * Finds an item in the inventory by its name.
+     *
+     * @param itemName The name of the item to search for.
+     * @return The InventoryItem if found, or null if not found.
+     */
+    public InventoryItem findItemByName(String itemName) {
+        for (int row = 0; row < items.length; row++) {
+            for (int col = 0; col < items[row].length; col++) {
+                InventoryItem item = items[row][col];
+                if (item != null && item.getName().equals(itemName)) {
+                    return item;
+                }
+            }
+        }
+        return null; // Item not found
+    }
 }

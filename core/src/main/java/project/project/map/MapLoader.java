@@ -44,7 +44,6 @@ public class MapLoader {
             int chunkX = chunk.getChunkX();
             int chunkY = chunk.getChunkY();
             if (chunkX < startX || chunkX > endX || chunkY < startY || chunkY > endY) {
-                System.out.println("Unloading chunk at: (" + chunkX + ", " + chunkY + ")");
                 chunksToUnload.add(chunk);
             }
         }

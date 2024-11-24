@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -24,6 +23,7 @@ import project.project.components.*;
 import project.project.entities.InventoryItem;
 import project.project.entities.ItemType;
 import project.project.entities.Player;
+import project.project.entities.Character;
 import project.project.systems.CraftingSystem;
 import project.project.systems.ObjectPlacementSystem;
 
@@ -182,24 +182,19 @@ public class InventoryUI {
         InventoryComponent inventory = player.getComponent(InventoryComponent.class);
 
         inventoryTable.clear();
-        inventoryTable.setPosition(
-                (Gdx.graphics.getWidth() - inventoryTable.getWidth()) / 2f,
-                (Gdx.graphics.getHeight() - inventoryTable.getHeight()) / 2f
-        );
 
         Label.LabelStyle labelStyle = new Label.LabelStyle();
         labelStyle.font = font;
 
-        inventoryTable.add(new Label("INVENTORY", labelStyle)).colspan(6).pad(10).row(); // 6 columns for inventory
+        inventoryTable.add(new Label("INVENTORY", labelStyle)).colspan(6).pad(10).row();
 
-        for (int row = 0; row < 5; row++) { // 5 rows
-            for (int col = 0; col < 6; col++) { // 6 columns
+        for (int row = 0; row < 5; row++) {
+            for (int col = 0; col < 6; col++) {
                 InventoryItem item = inventory.getItem(row, col);
 
                 Stack slotStack = new Stack();
                 Image slotImage = new Image(new TextureRegionDrawable(new TextureRegion(
-                        createRoundedTexture(64, 64, new Color(0.3f, 0.3f, 0.3f, 1), 8) // Rounded corners for slots
-                )));
+                    createRoundedTexture(64, 64, new Color(0.3f, 0.3f, 0.3f, 1), 8))));
                 slotStack.add(slotImage);
 
                 if (item != null) {
@@ -215,14 +210,13 @@ public class InventoryUI {
                     }
                 }
 
-                final int finalRow = row; // Needed for use inside the lambda
+                final int finalRow = row;
                 final int finalCol = col;
 
-                // Add listener to handle inventory clicks
                 slotStack.addListener(new ClickListener() {
                     @Override
                     public void clicked(InputEvent event, float x, float y) {
-                        handleInventoryClick(finalRow, finalCol, event); // Call handleInventoryClick here
+                        handleInventoryClick(finalRow, finalCol, event);
                     }
                 });
 
@@ -245,7 +239,7 @@ public class InventoryUI {
         Map<String, Map<String, Integer>> filteredRecipes = getRecipesForCategory(category);
 
         for (Map.Entry<String, Map<String, Integer>> recipe : filteredRecipes.entrySet()) {
-            String itemName = recipe.getKey();
+            String itemName = recipe.getKey(); // The crafted item's name
             Map<String, Integer> requirements = recipe.getValue();
 
             // Display crafting requirements
@@ -270,17 +264,33 @@ public class InventoryUI {
                 craftButton.getStyle().up.setMinWidth(0.5f); // Make button semi-transparent
             }
 
+            // Add listener to handle crafting logic
             craftButton.addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
                     if (canCraft) {
                         boolean crafted = new CraftingSystem().craftItem(crafting, player.getComponent(InventoryComponent.class), itemName, 1);
                         if (crafted) {
-                            System.out.println("Crafted: " + itemName);
-                            setVisible(false); // Close inventory and crafting menus
-                            placementSystem.startPlacingBuilding(itemName); // Start placing the building
-                        } else {
-                            System.out.println("Insufficient resources for " + itemName);
+                            // Check if the crafted item is a building item
+                            if (isBuildingItem(itemName)) {
+                                // Create a Character object for the crafted item to allow placement
+                                project.project.entities.Character buildingEntity =
+                                    new project.project.entities.Character(itemName);
+
+                                buildingEntity.addComponent(new PlacementComponent(true, 1, 1));
+                                buildingEntity.addComponent(new HitboxComponent(Constants.TILE_WIDTH, Constants.TILE_HEIGHT));
+                                buildingEntity.addComponent(new TextureComponent(itemName.toLowerCase() + ".png", Constants.TILE_WIDTH, Constants.TILE_HEIGHT));
+
+                                // Start placing the crafted building object
+                                placementSystem.startPlacingObject(buildingEntity);
+
+                                // Remove one instance of the item from inventory
+                                player.getComponent(InventoryComponent.class).removeItemFromInventory(itemName, 1);
+
+                                // Close the inventory and crafting menus
+                                setVisible(false);
+                            }
+                            updateUI(); // Refresh inventory and crafting UI
                         }
                     }
                 }
@@ -292,6 +302,18 @@ public class InventoryUI {
             craftingTable.row();
         }
     }
+
+    /**
+     * Determines if an item is a building item.
+     *
+     * @param itemName The name of the item to check.
+     * @return True if the item is a building item, otherwise false.
+     */
+    private boolean isBuildingItem(String itemName) {
+        // List of building items (expand as needed)
+        return itemName.equalsIgnoreCase("campfire") || itemName.equalsIgnoreCase("chest");
+    }
+
 
     private Map<String, Map<String, Integer>> getRecipesForCategory(String category) {
         CraftingComponent crafting = player.getComponent(CraftingComponent.class);
@@ -313,44 +335,21 @@ public class InventoryUI {
             case "campfire":
             case "chest":
                 return "Building";
-            case "sword":
-            case "axe":
+
+            case "wooden_sword":
+            case "stone_sword":
                 return "Weapons";
-            case "steak":
-            case "healing potion":
-                return "consumables";
-            default:
+
+            case "stone_pickaxe":
+            case "stone_axe":
                 return "Tools";
-        }
-    }
 
-    private void populateCraftingNavigation() {
-        craftingNavigationTable.clear();
+            case "apple":
+            case "healing_potion":
+                return "Consumables";
 
-        Label.LabelStyle labelStyle = new Label.LabelStyle();
-        labelStyle.font = font;
-
-        craftingNavigationTable.add(new Label("Categories", labelStyle)).pad(10).row();
-
-        String[] categories = {"Food/Water", "Tools", "Building", "Weapons"};
-
-        for (String category : categories) {
-            TextButton.TextButtonStyle buttonStyle = new TextButton.TextButtonStyle();
-            buttonStyle.font = font;
-            buttonStyle.up = new TextureRegionDrawable(new TextureRegion(
-                    createRoundedTexture(200, 50, new Color(0.6f, 0.4f, 0.2f, 1), 10) // Rounded corners for buttons
-            ));
-
-            TextButton categoryButton = new TextButton(category, buttonStyle);
-            craftingNavigationTable.add(categoryButton).size(200, 50).pad(10).row();
-
-            categoryButton.addListener(new ClickListener() {
-                @Override
-                public void clicked(InputEvent event, float x, float y) {
-                    populateCraftingUI(category); // Populate recipes for the selected category
-                    craftingTable.setVisible(true); // Ensure crafting table becomes visible
-                }
-            });
+            default:
+                return "Other";
         }
     }
 
@@ -358,47 +357,62 @@ public class InventoryUI {
         InventoryComponent inventory = player.getComponent(InventoryComponent.class);
         InventoryItem clickedItem = inventory.getItem(row, col);
 
-        if (pickedUpItem == null) { // Picking up an item
+        if (pickedUpItem == null) {
+            // Picking up an item
             if (clickedItem != null) {
                 // If a Building item is clicked, close the inventory and start placement
                 if (clickedItem.getItemType() == ItemType.BUILDING) {
-                    setVisible(false); // Close inventory and crafting UI
-                    placementSystem.startPlacingBuilding(clickedItem.getName()); // Start placing the building
-                    return;
+                    setVisible(false); // Close inventory UI
+
+                    // Create the building entity to be placed
+                    project.project.entities.Character buildingEntity =
+                        new project.project.entities.Character(clickedItem.getName()); // Ensure the correct Character class is used
+
+                    // Add components directly or adjust to your component system
+                    buildingEntity.addComponent(new PlacementComponent(true, 1, 1));
+                    buildingEntity.addComponent(new HitboxComponent(Constants.TILE_WIDTH, Constants.TILE_HEIGHT));
+
+                    // Start placement using ObjectPlacementSystem
+                    placementSystem.startPlacingObject(buildingEntity);
+
+                    // Remove the item from inventory
+                    inventory.removeItemFromInventory(clickedItem.getName(), 1);
+                    return; // Exit after starting placement
                 }
 
-                if (event.getButton() == Input.Buttons.RIGHT) { // Split stack
+                // Split stack logic (unchanged)
+                if (event.getButton() == Input.Buttons.RIGHT) {
                     int halfQuantity = clickedItem.getQuantity() / 2;
                     pickedUpItem = new InventoryItem(clickedItem.getName(), halfQuantity, clickedItem.getTexturePath(), clickedItem.getItemType());
                     clickedItem.setQuantity(clickedItem.getQuantity() - halfQuantity);
                     if (clickedItem.getQuantity() == 0) {
                         inventory.clearSlot(row, col);
                     }
-                } else { // Pick up the entire stack
+                } else {
+                    // Pick up the entire stack
                     pickedUpItem = clickedItem;
                     inventory.clearSlot(row, col);
                 }
             }
-        } else { // Placing the picked-up item
-            if (row == 0 && !pickedUpItem.canPlaceInHotbar()) { // Restrict hotbar placement
-                System.out.println("Only tools and consumables can be placed in the hotbar!");
-                return;
-            }
+        } else {
+            // Placing the picked-up item in inventory (unchanged)
+            InventoryItem existingItem = inventory.getItem(row, col);
 
-            if (clickedItem == null) { // Empty slot
+            if (existingItem == null) {
                 inventory.setItem(row, col, pickedUpItem);
-                pickedUpItem = null; // Clear picked-up item
-            } else if (clickedItem.isSameType(pickedUpItem)) { // Stacking items
-                int spaceLeft = 64 - clickedItem.getQuantity(); // Assuming max stack size is 64
+                pickedUpItem = null;
+            } else if (existingItem.isSameType(pickedUpItem)) {
+                int spaceLeft = 64 - existingItem.getQuantity();
                 int mergeQuantity = Math.min(spaceLeft, pickedUpItem.getQuantity());
-                clickedItem.setQuantity(clickedItem.getQuantity() + mergeQuantity);
+
+                existingItem.setQuantity(existingItem.getQuantity() + mergeQuantity);
                 pickedUpItem.setQuantity(pickedUpItem.getQuantity() - mergeQuantity);
 
                 if (pickedUpItem.getQuantity() <= 0) {
-                    pickedUpItem = null; // Fully merged
+                    pickedUpItem = null;
                 }
-            } else { // Swapping items
-                InventoryItem temp = clickedItem;
+            } else {
+                InventoryItem temp = existingItem;
                 inventory.setItem(row, col, pickedUpItem);
                 pickedUpItem = temp;
             }
@@ -407,6 +421,7 @@ public class InventoryUI {
         updateUI(); // Refresh inventory and hotbar UI
         player.notifyInventoryUpdate(); // Notify inventory update
     }
+
 
     private void mergeOrSwapItems(int row, int col, InventoryItem clickedItem) {
         InventoryComponent inventory = player.getComponent(InventoryComponent.class);
@@ -439,27 +454,6 @@ public class InventoryUI {
         // Notify the UI of any changes to the inventory
         player.notifyInventoryUpdate();
     }
-
-    private void placeBuilding(InventoryItem buildingItem, int row, int col) {
-        Vector2 screenPosition = new Vector2(Gdx.input.getX(), Gdx.input.getY());
-        Vector2 worldPosition = stage.screenToStageCoordinates(screenPosition);
-
-        Vector2 snappedPosition = placementSystem.snapToTile(worldPosition);
-
-        project.project.entities.Character buildingEntity = new project.project.entities.Character(buildingItem.getName());
-        buildingEntity.addComponent(new PlacementComponent(true, 1, 1));
-        buildingEntity.addComponent(new HitboxComponent(Constants.TILE_WIDTH, Constants.TILE_HEIGHT));
-
-        boolean placed = placementSystem.placeObject(player, buildingEntity, snappedPosition, false);
-
-        if (placed) {
-            player.getComponent(InventoryComponent.class).removeItemFromInventory(buildingItem.getName(), 1);
-            System.out.println("Placed " + buildingItem.getName() + " at " + snappedPosition);
-        } else {
-            System.out.println("Failed to place " + buildingItem.getName());
-        }
-    }
-
 
     private void populateHotbarUI() {
         InventoryComponent inventory = player.getComponent(InventoryComponent.class);
@@ -577,13 +571,17 @@ public class InventoryUI {
         craftingNavigationTable.setVisible(visible);
         craftingTable.setVisible(visible);
 
+        // Refresh UI when inventory is shown
+        if (visible) {
+            updateUI();
+        }
+
         // Also reset dragging item when hiding the UI
         if (!visible && pickedUpItem != null) {
             moveToFirstAvailable(pickedUpItem, -1, -1); // Return picked-up item to the inventory
             pickedUpItem = null;
             updateDraggingItemImage();
         }
-        updateUI(); // Refresh UI on visibility change
     }
 
     public void updateUI() {
@@ -605,7 +603,7 @@ public class InventoryUI {
 
         craftingNavigationTable.add(new Label("Categories", labelStyle)).pad(10).row();
 
-        String[] categories = {"Food/Water", "Tools", "Building", "Weapons"};
+        String[] categories = {"Consumables", "Tools", "Building", "Weapons", "Other"};
 
         for (String category : categories) {
             TextButton.TextButtonStyle buttonStyle = new TextButton.TextButtonStyle();
@@ -668,10 +666,10 @@ public class InventoryUI {
         );
 
         // Center crafting navigation background
-        craftingNavigationBackground.setSize(500, 360); // Adjust width/height as necessary to cover UI elements
+        craftingNavigationBackground.setSize(500, 450); // Adjust width/height as necessary to cover UI elements
         craftingNavigationBackground.setPosition(
                 70,
-                400
+                350
         );
     }
 
