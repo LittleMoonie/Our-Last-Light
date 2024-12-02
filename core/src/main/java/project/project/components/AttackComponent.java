@@ -1,38 +1,4 @@
-//package project.project.components;
-//
-//public class AttackComponent implements Component {
-//    private float damage;
-//
-//    public AttackComponent(float damage) {
-//        this.damage = damage;
-//    }
-//
-//    public float getDamage() {
-//        return damage;
-//    }
-//}
 package project.project.components;
-
-//public class AttackComponent implements Component {
-//    private int attackPower;
-//
-//    public AttackComponent(int attackPower) {
-//        this.attackPower = attackPower;
-//    }
-//
-//    public int getAttackPower() {
-//        return attackPower;
-//    }
-//
-//    public void setAttackPower(int attackPower) {
-//        this.attackPower = attackPower;
-//    }
-//
-//    public String getName() {
-//        return "AttackComponent";
-//    }
-//}
-
 
 public class AttackComponent implements Component {
     private int damage;
@@ -47,12 +13,13 @@ public class AttackComponent implements Component {
         return attackRange;
     }
 
-    public void setAttackRange(float attackRange) {
-        this.attackRange = attackRange;
+
+    public int getAttackDamage() {
+        return damage;
     }
 
-    public int getDamage() {
-        return damage;
+    public void setAttackDamage(int damage) {
+        this.damage = damage;
     }
 
 }

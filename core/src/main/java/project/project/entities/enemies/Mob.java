@@ -1,16 +1,15 @@
 package project.project.entities.enemies;
 
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.Batch;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
-import project.project.components.AttackComponent;
-import project.project.components.HealthComponent;
-import project.project.components.HitboxComponent;
-import project.project.components.MovementComponent;
+import project.project.components.*;
 import project.project.entities.Character;
-import project.project.systems.AttackSystem;
+//import project.project.systems.AttackSystem;
 
 import java.util.List;
 
@@ -22,15 +21,21 @@ public class Mob extends Character {
     private final Texture mobTexture;
     private Rectangle hitboxRectangle;
 
+    // Ajoutez ces nouveaux champs
+    private boolean isAttacking = false;
+    private float attackEffectTimer = 0f;
+    private static final float ATTACK_EFFECT_DURATION = 0.5f;
+
     public Mob(Vector2 mobPosition) {
         super("Mob");
         addComponent(new HealthComponent(50));
         this.position = mobPosition;
         this.targetPosition = null; // Pas de cible initialement
-        addComponent(new AttackComponent(5, 90)); // Dégâts et vitesse d'attaque
+        addComponent(new AttackComponent(1, 50)); // Dégâts et vitesse d'attaque
         addComponent(new MovementComponent(80)); // Vitesse de mouvement
         addComponent(new HitboxComponent(50, 50));
 
+        addComponent(new AttackCooldownComponent(1.0f)); // Cooldown de 1 seconde entre chaque attaque
         // Charger la texture
         mobTexture = new Texture("player2.png");
 
@@ -73,7 +78,7 @@ public class Mob extends Character {
     public void update(float delta, Vector2 playerPosition) {
         // Si aucune cible n'est définie ou si la cible est atteinte, en choisir une nouvelle
         if (targetPosition == null || position.dst(targetPosition) < 2f) { // 5f est une marge d'arrêt
-            setRandomTargetAroundPlayer(playerPosition, 1); // Rayon fixe (100) autour du joueur
+            setRandomTargetAroundPlayer(playerPosition, 300); // Rayon fixe (100) autour du joueur
         }
 
         // Déplacement vers la position cible
@@ -83,8 +88,25 @@ public class Mob extends Character {
 
         // Met à jour la hitbox
         hitboxRectangle.setPosition(position.x - SIZE / 2, position.y - SIZE / 2);
+
+
+
+    }
+    // Méthode pour déclencher l'attaque
+    public void startAttack() {
+        isAttacking = true;
+        attackEffectTimer = ATTACK_EFFECT_DURATION;
     }
 
+    // Méthode à appeler dans le update
+    public void updateAttackEffect(float delta) {
+        if (isAttacking) {
+            attackEffectTimer -= delta;
+            if (attackEffectTimer <= 0) {
+                isAttacking = false;
+            }
+        }
+    }
     public Vector2 getPosition() {
         return position;
     }
@@ -99,7 +121,8 @@ public class Mob extends Character {
     }
 
     public boolean isAlive() {
-        return health > 0;
+        HealthComponent healthComponent = getComponent(HealthComponent.class);
+        return healthComponent != null && healthComponent.getCurrentHealth() > 0;
     }
 
     public void takeDamage(float damage) {
@@ -114,10 +137,6 @@ public class Mob extends Character {
         mobTexture.dispose(); // Libère la mémoire
     }
 
-    public void attack(List<Mob> entities) {
-        AttackSystem attackSystem = new AttackSystem();
-        // attackSystem.handleAttack(this, entities);  // Appel du système d'attaque
-    }
 
     public float getPosX() {
         return position.x;
@@ -145,4 +164,5 @@ public class Mob extends Character {
             return 0; // Si le composant n'est pas trouvé, retourne 0
         }
     }
+
 }

@@ -3,7 +3,7 @@ package project.project.entities;
 import com.badlogic.gdx.math.Vector2;
 import project.project.components.*;
 import project.project.entities.enemies.Mob;
-import project.project.systems.AttackSystem;
+//import project.project.systems.AttackSystem;
 import project.project.systems.InventorySystem;
 import project.project.systems.ObjectPlacementSystem;
 
@@ -20,7 +20,7 @@ public class Player extends Character {
     // Listener to notify UI of inventory changes
     private Runnable inventoryUpdateListener;
 
-    private AttackSystem attackSystem = new AttackSystem();
+//    private AttackSystem attackSystem = new AttackSystem();
 
     public Player(Vector2 startingTilePos) {
         super("Player");
@@ -30,7 +30,7 @@ public class Player extends Character {
         addComponent(new HealthComponent(100));
         addComponent(new MovementComponent(2));
 
-        addComponent(new AttackComponent(2, 80)); // Ajout de l'AttackComponent
+        addComponent(new AttackComponent(10, 100)); // Ajout de l'AttackComponent
 
         addComponent(new HitboxComponent(50, 70));
 
@@ -195,14 +195,4 @@ public class Player extends Character {
     public Vector2 getPosition() {
         return position.worldPos;
     }
-
-    public void attack(List<Mob> entities) {
-        List<Mob> mobs = entities.stream()
-            .filter(entity -> entity instanceof Mob)
-            .map(entity -> (Mob) entity)
-            .toList();
-
-//        attackSystem.handleAttack(this, mobs);
-    }
-
 }
