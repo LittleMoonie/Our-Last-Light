@@ -1,6 +1,11 @@
 // GameScreen.java
 package project.project.screens;
 
+import com.badlogic.gdx.*;
+import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.*;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.*;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -14,27 +19,26 @@ import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import project.project.Constants;
+import project.project.components.*;
+import project.project.entities.*;
+import project.project.entities.enemies.Mob;
+import project.project.map.*;
 import project.project.components.PositionComponent;
 import project.project.components.TextureComponent;
 import project.project.entities.Character;
 import project.project.map.MapLoader;
 import project.project.rendering.IsometricRenderer;
-import project.project.map.MapGenerator;
-import project.project.entities.Player;
-import project.project.systems.MovementSystem;
-import project.project.systems.ObjectPlacementSystem;
-import project.project.systems.RenderSystem;
-import project.project.ui.HUD;
-import project.project.ui.InventoryUI;
-import project.project.utils.CoordinateUtils;
-import project.project.ui.InventoryUI;
+import project.project.systems.*;
+import project.project.ui.*;
+import project.project.utils.*;
 
-import static project.project.Constants.MAP_HEIGHT;
-import static project.project.Constants.MAP_WIDTH;
+import java.util.*;
+
+import static project.project.Constants.*;
 
 public class GameScreen implements Screen {
     private SpriteBatch batch;
-    private OrthographicCamera camera; // World camera
+    private OrthographicCamera camera;
     private IsometricRenderer renderer;
     private Player player;
     private BitmapFont font;
@@ -47,11 +51,24 @@ public class GameScreen implements Screen {
     private boolean isInventoryOpen = false; // Track inventory state
     private ObjectPlacementSystem placementSystem;
     private final MapLoader mapLoader;
+    private MobSpawnSystem mobSpawnSystem;
+//    private AttackSystem attackSystem; // Ajout de l'AttackSystem
+    private ShapeRenderer shapeRenderer; // Ajout de ShapeRenderer pour dessiner les zones d'attaque
+    private Rectangle attackRangeRectangle; // Rectangle pour la zone d'attaque
+    private float attackRangeDuration = 0.2f; // Durée d'affichage du rectangle d'attaque
+    private float attackRangeTimer = 0f; // Timer pour suivre la durée d'affichage du rectangle d'attaque
+
+
+    private List<Mob> deadMobs = new ArrayList<>();
 
 
     public GameScreen(SpriteBatch batch) {
         this.batch = batch;
-
+        shapeRenderer = new ShapeRenderer(); // Initialisation de ShapeRenderer
+        mapGenerator = new MapGenerator(MAP_WIDTH, MAP_HEIGHT);
+        mobSpawnSystem = new MobSpawnSystem();
+        mapLoader = new MapLoader(mapGenerator);
+        renderer = new IsometricRenderer(mapGenerator, mapLoader);
 
         // Map generator and renderer
         MapGenerator mapGenerator = new MapGenerator(MAP_WIDTH, MAP_HEIGHT);
@@ -74,10 +91,15 @@ public class GameScreen implements Screen {
         // HUD and systems
         this.hud = new HUD(batch, player);
 
+        placementSystem = new ObjectPlacementSystem();
+        movementSystem = new MovementSystem();
+        renderSystem = new RenderSystem(batch, camera);
+//        attackSystem = new AttackSystem(); // Initialisation de l'AttackSystem
         // Pass the render system to the placement system
         this.renderSystem = new RenderSystem(batch, camera);
         this.placementSystem = new ObjectPlacementSystem(renderSystem);
 
+        stage = new Stage(new ScreenViewport());
         // Add the player to the render system
         this.movementSystem = new MovementSystem();
         renderSystem.addEntity(player);
@@ -91,20 +113,37 @@ public class GameScreen implements Screen {
         inventoryUI.setVisible(false); // Start with the inventory hidden
         // Font for debug UI
         this.font = new BitmapFont();
+
+        Vector2 playerPosition = player.getWorldPosition();
+        mobSpawnSystem.spawnMobs(playerPosition, 5);
     }
 
     @Override
     public void show() {
         stage = new Stage(new ScreenViewport());
-        Gdx.input.setInputProcessor(stage); // Redirect input to stage
+        Gdx.input.setInputProcessor(stage);
 
         // Initialize the inventory UI
         inventoryUI = new InventoryUI(stage, player, placementSystem);
-        inventoryUI.setVisible(false); // Start with the inventory hidden
+        inventoryUI.setVisible(false);
+
+        Vector2 playerPosition = player.getWorldPosition();
+
+        // Ajouter les mobs au RenderSystem
+        List<Mob> mobs = mobSpawnSystem.getMobs();
+        for (Mob mob : mobs) {
+            renderSystem.addEntity(mob);
+            System.out.println("Mob added to RenderSystem: " + mob.getWorldPosition());
+        }
     }
 
     @Override
     public void render(float delta) {
+        // Ensure systems are initialized
+        if (renderSystem == null) {
+            throw new IllegalStateException("RenderSystem is not initialized!");
+        }
+
         Gdx.gl.glClearColor(0, 0, 0, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
@@ -135,6 +174,8 @@ public class GameScreen implements Screen {
         float extendedWidth = scaledViewportWidth + tileWidth * 2;
         float extendedHeight = scaledViewportHeight + tileHeight * 2;
 
+        float extendedWidth = camera.viewportWidth * camera.zoom + Constants.TILE_WIDTH * 2;
+        float extendedHeight = camera.viewportHeight * camera.zoom + Constants.TILE_HEIGHT * 2;
         Rectangle viewBounds = new Rectangle(
             camera.position.x - extendedWidth / 2,
             camera.position.y - extendedHeight / 2,
@@ -160,10 +201,55 @@ public class GameScreen implements Screen {
 
         // Draw ground and entities
         renderer.drawGround(batch, viewBounds);
+
+        List<Entity> visibleEntities = new ArrayList<>();
+        visibleEntities.add(player);
+
+
+        List<Mob> mobsInView = new ArrayList<>();
+        for (Mob mob : mobSpawnSystem.getMobs()) {
+            if (isWithinCameraView(mob.getWorldPosition(), camera)) {
+                mob.render(batch,shapeRenderer); // Dessine le mob avec ShapeRenderer
+                mob.update(delta, player.getWorldPosition());
+                mobsInView.add(mob);
+                visibleEntities.add(mob);
+
+                // Dessiner la vie du mob au-dessus du mob
+                HealthComponent healthComponent = mob.getComponent(HealthComponent.class);
+                if (healthComponent != null) {
+                    float healthPercentage = (float) healthComponent.getCurrentHealth() / healthComponent.getMaxHealth();
+                    String healthText = String.format("%.0f", (float) healthComponent.getCurrentHealth());
+                    font.draw(batch, healthText, mob.getWorldPosition().x, mob.getWorldPosition().y + 32);
+                }
+
+                AttackCooldownComponent attackCooldown = mob.getComponent(AttackCooldownComponent.class);
+                if (attackCooldown != null && attackCooldown.cooldownTimer <= 0) {
+                    // Afficher le pistolet
+                    font.getData().setScale(2f);
+                    font.draw(batch, "piou piou",
+                        mob.getWorldPosition().x,
+                        mob.getWorldPosition().y + mob.getHitboxRectangle().height + 20
+                    );
+                    font.getData().setScale(1f); // Rétablir la taille de police par défaut
+                }
+            }
+        }
+        // afficher les mobs de la liste mobsInView
+//        System.out.println("Mobs in view: " + mobsInView.size());
+
+        renderSystem.update(delta, visibleEntities);
+
+
+//        attackSystem.update(delta, mobsInView, player);
+
+        // Ajouter la vérification et la gestion des attaques des mobs
+        checkMobAttacksOnPlayer(delta);
         renderSystem.update(delta);
         batch.end();
 
-        // Render HUD and UI
+        renderCollisions(player, mobsInView);
+
+        mobSpawnSystem.updateMobs(delta);
         hud.update();
         hud.render();
 
@@ -173,9 +259,6 @@ public class GameScreen implements Screen {
 
     private void smoothCameraFollow() {
         Vector2 playerWorldPosition = player.getWorldPosition();
-
-        // Interpoler la position de la caméra pour un suivi fluide
-        float lerp = 0.05f; // Valeur d'interpolation (0 = pas de mouvement, 1 = mouvement instantané)
         camera.position.set(playerWorldPosition.x, playerWorldPosition.y, 0);
         camera.update();
     }
@@ -199,8 +282,157 @@ public class GameScreen implements Screen {
             camera.zoom += Constants.ZOOM_SPEED * delta * 10;
             camera.zoom = Math.min(Constants.MAX_ZOOM, camera.zoom);
         }
+
+        // Gestion de l'attaque avec la touche espace
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            System.out.println("Attaque détectée !");
+            List<Mob> mobs = mobSpawnSystem.getMobs();
+            List<Mob> deadMobs = new ArrayList<>();
+
+            for (Mob mob : mobs) {
+                // Récupérer la position du mob
+                Vector2 mobPosition = mob.getPosition();
+                if (mobPosition != null) {
+                    // Calculer la distance entre le centre du cercle d'attaque du joueur et la position du mob
+                    PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+                    HitboxComponent playerHitbox = player.getComponent(HitboxComponent.class);
+                    AttackComponent playerAttack = player.getComponent(AttackComponent.class);
+
+                    if (playerPosition != null && playerHitbox != null && playerAttack != null) {
+                        float playerCenterX = playerPosition.worldPos.x + playerHitbox.width / 2;
+                        float playerCenterY = playerPosition.worldPos.y + playerHitbox.height / 2;
+
+                        // Calculer la distance entre le centre du cercle d'attaque et la position du mob
+                        double distance = Math.sqrt(Math.pow(playerCenterX - mobPosition.x, 2) +
+                            Math.pow(playerCenterY - mobPosition.y, 2));
+
+                        // Vérifier si le mob est dans le cercle d'attaque du joueur
+                        if (distance <= playerAttack.getAttackRange()) {
+                            // Appliquer les dégâts si le mob est dans la portée d'attaque
+                            System.out.println("Mob " + mob.getId() + " est dans la range d'attaque de Player et il lui reste " + mob.getComponent(HealthComponent.class).getCurrentHealth() + " de vie");
+                            applyDamage(mob);
+
+                            // Vérifier si le mob est mort et l'ajouter à la liste des mobs morts
+                            HealthComponent mobHealth = mob.getComponent(HealthComponent.class);
+                            if (mobHealth != null && mobHealth.getCurrentHealth() <= 0) {
+                                System.out.println("Le mob " + mob.getId() + " est mort !");
+                                deadMobs.add(mob);
+                            }
+                        }
+                    } else {
+                        System.out.println("Un des composants manquants pour le mob " + mob.getId());
+                    }
+                } else {
+                    System.out.println("Position non trouvée pour le mob " + mob.getId());
+                }
+            }
+        }
+
         camera.update();
     }
+    private void renderCollisions(Player player, List<Mob> mobs) {
+        shapeRenderer.setProjectionMatrix(camera.combined);
+
+        // Commencez à dessiner des formes en mode "Ligne" pour la hitbox
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Line);
+
+        // Récupère la position du joueur
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+        HitboxComponent playerHitbox = player.getComponent(HitboxComponent.class);
+        AttackComponent playerAttack = player.getComponent(AttackComponent.class);
+
+        if (playerPosition != null && playerHitbox != null && playerAttack != null) {
+
+
+            // Dessiner la hitbox du joueur
+            shapeRenderer.setColor(Color.GREEN);
+            shapeRenderer.rect(
+                playerPosition.worldPos.x, playerPosition.worldPos.y,
+                playerHitbox.width, playerHitbox.height
+            );
+
+            shapeRenderer.setColor(1, 0.647f, 0, 0.5f); // Orange avec une transparence (alpha = 0.5f)
+
+            // Dessiner le cercle rempli pour la zone d'attaque
+            shapeRenderer.circle(playerPosition.worldPos.x + playerHitbox.width / 2,
+                playerPosition.worldPos.y + playerHitbox.height / 2,
+                playerAttack.getAttackRange());
+
+        } else {
+            if (playerPosition == null) {
+                System.out.println("Player PositionComponent not found");
+            }
+            if (playerHitbox == null) {
+                System.out.println("Player HitboxComponent not found");
+            }
+        }
+
+        // Itération sur les mobs
+        for (Mob mob : mobs) {
+            // Utilise la méthode getHitboxRectangle() pour récupérer la hitbox correcte du mob
+            Rectangle mobHitbox = mob.getHitboxRectangle();
+            AttackComponent mobAttack = mob.getComponent(AttackComponent.class);
+            HealthComponent mobHealth = mob.getComponent(HealthComponent.class);
+
+            if (mobHitbox != null && mobAttack != null) {
+                shapeRenderer.setColor(Color.BLUE);
+                shapeRenderer.rect(
+                    mobHitbox.x, mobHitbox.y, // Utilisation des coordonnées de la hitbox
+                    mobHitbox.width, mobHitbox.height
+                );
+
+                // Dessiner le cercle rempli pour la zone
+                shapeRenderer.setColor(1, 0.647f, 0, 0.5f);
+                shapeRenderer.circle(mobHitbox.x + mobHitbox.width / 2,
+                    mobHitbox.y + mobHitbox.height / 2,
+                    mobAttack.getAttackRange());
+
+                // Calculer la distance entre le joueur et le mob
+                double distance = Math.sqrt(Math.pow(playerPosition.worldPos.x - mobHitbox.x, 2) +
+                    Math.pow(playerPosition.worldPos.y - mobHitbox.y, 2));
+
+                // Vérifier si le mob est dans la portée d'attaque du joueur
+                if (distance <= playerAttack.getAttackRange()) {
+                    // Afficher le message indiquant que le mob est dans la portée d'attaque
+//                    System.out.println("Mob " + mob.getId() + " est dans la range d'attaque de " + player.getName()+" et il lui reste "+mobHealth.currentHealth+" de vie");
+                }
+            } else {
+                System.out.println("Mob Hitbox is null");
+            }
+        }
+
+        // Terminer le dessin pour les mobs
+        shapeRenderer.end();
+    }
+
+    private void applyDamage(Mob mob) {
+        // Récupérer le composant de santé du mob
+        HealthComponent mobHealth = mob.getComponent(HealthComponent.class);
+
+        // Vérifier si le mob a un composant de santé
+        if (mobHealth != null) {
+            int damage = player.getComponent(AttackComponent.class).getAttackDamage(); // Récupérer les dégâts du joueur
+
+            mobHealth.takeDamage(damage);
+
+            // Afficher un message dans la console pour debug
+            System.out.println("Le mob " + mob.getId() + " a reçu " + damage + " dégâts. Vie restante : " + mobHealth.currentHealth);
+
+            // Si la santé du mob est inférieure ou égale à 0, le mob est tué
+            if (mobHealth.currentHealth <= 0) {
+                System.out.println("Le mob " + mob.getId() + " est mort !");
+                mobDie(mob); // Appeler une méthode pour gérer la mort du mob
+            }
+        }
+    }
+
+    private void mobDie(Mob mob) {
+        deadMobs.add(mob); // Ajouter le mob à la liste des morts
+    }
+
+
+
+
 
     private Vector2 isoToWorld(float tileX, float tileY) {
         // Correct conversion from isometric to world coordinates
@@ -229,6 +461,8 @@ public class GameScreen implements Screen {
         font.dispose();
         stage.dispose(); // Dispose the stage
         mapLoader.dispose();
+        shapeRenderer.dispose(); // Dispose de ShapeRenderer
+//        attackSystem.dispose();
     }
 
     @Override

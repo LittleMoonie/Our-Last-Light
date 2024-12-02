@@ -2,10 +2,13 @@ package project.project.entities;
 
 import com.badlogic.gdx.math.Vector2;
 import project.project.components.*;
+import project.project.entities.enemies.Mob;
+//import project.project.systems.AttackSystem;
 import project.project.systems.InventorySystem;
 import project.project.systems.ObjectPlacementSystem;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class Player extends Character {
@@ -17,6 +20,8 @@ public class Player extends Character {
     // Listener to notify UI of inventory changes
     private Runnable inventoryUpdateListener;
 
+//    private AttackSystem attackSystem = new AttackSystem();
+
     public Player(Vector2 startingTilePos) {
         super("Player");
         this.position = new PositionComponent(startingTilePos);
@@ -24,6 +29,10 @@ public class Player extends Character {
         addComponent(new TextureComponent("player1.png", 50, 70));
         addComponent(new HealthComponent(75));
         addComponent(new MovementComponent(2));
+
+        addComponent(new AttackComponent(10, 100)); // Ajout de l'AttackComponent
+
+        addComponent(new HitboxComponent(50, 70));
 
         // Inventory
         InventoryComponent inventory = new InventoryComponent(6, 9);
@@ -210,4 +219,8 @@ public class Player extends Character {
         return inventory;
     }
 
+
+    public Vector2 getPosition() {
+        return position.worldPos;
+    }
 }
