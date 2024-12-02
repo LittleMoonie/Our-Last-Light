@@ -1,11 +1,9 @@
-// RenderSystem.java
 package project.project.systems;
 
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import project.project.entities.Character;
 import project.project.entities.Entity;
-import project.project.entities.Player;
 import project.project.components.PositionComponent;
 import project.project.components.TextureComponent;
 
@@ -35,21 +33,10 @@ public class RenderSystem {
                 TextureComponent texture = character.getComponent(TextureComponent.class);
 
                 if (position != null && texture != null) {
-                    batch.draw(texture.getTexture(), position.worldPos.x, position.worldPos.y, texture.getWidth(), texture.getHeight());
+                    batch.draw(texture.getTexture(), position.worldPos.x, position.worldPos.y,
+                        texture.getWidth(), texture.getHeight());
                 }
             }
         }
     }
-
-//    private void renderEntity(Entity entity) {
-//        if (entity instanceof Player) {
-//            Player player = (Player) entity;
-//            PositionComponent position = player.getComponent(PositionComponent.class);
-//            TextureComponent texture = player.getComponent(TextureComponent.class);
-//
-//            if (position != null && texture != null) {
-//                batch.draw(texture.getTexture(), position.worldPos.x, position.worldPos.y, texture.getWidth(), texture.getHeight());
-//            }
-//        }
-//    }
 }

@@ -22,7 +22,7 @@ public class Player extends Character {
         this.position = new PositionComponent(startingTilePos);
         addComponent(this.position);
         addComponent(new TextureComponent("player1.png", 50, 70));
-        addComponent(new HealthComponent(100));
+        addComponent(new HealthComponent(75));
         addComponent(new MovementComponent(2));
 
         // Inventory
@@ -36,17 +36,21 @@ public class Player extends Character {
         inventorySystem.addItem(inventory, new InventoryItem("wood", 64, "wood.png", ItemType.MATERIAL));
         inventorySystem.addItem(inventory, new InventoryItem("stone", 64, "stone.png", ItemType.MATERIAL));
 
+        // Weapons
+        inventorySystem.addItem(inventory, new InventoryItem("wooden_sword", 1, "wooden_sword.png", ItemType.TOOL));
+        inventorySystem.addItem(inventory, new InventoryItem("stone_sword", 1, "stone_sword.png", ItemType.TOOL));
+
         // Tools
-        inventorySystem.addItem(inventory, new InventoryItem("sword", 1, "sword.png", ItemType.TOOL));
-        inventorySystem.addItem(inventory, new InventoryItem("pickaxe", 1, "pickaxe.png", ItemType.TOOL));
-        inventorySystem.addItem(inventory, new InventoryItem("axe", 1, "axe.png", ItemType.TOOL));
+        inventorySystem.addItem(inventory, new InventoryItem("stone_pickaxe", 1, "stone_pickaxe.png", ItemType.TOOL));
+        inventorySystem.addItem(inventory, new InventoryItem("stone_axe", 1, "stone_axe.png", ItemType.TOOL));
 
         // Consumables
         inventorySystem.addItem(inventory, new InventoryItem("healing potion", 5, "healing_potion.png", ItemType.CONSUMABLE));
-        inventorySystem.addItem(inventory, new InventoryItem("steak", 10, "steak.png", ItemType.CONSUMABLE));
+        inventorySystem.addItem(inventory, new InventoryItem("apple", 10, "apple.png", ItemType.CONSUMABLE));
 
         // Building items
         inventorySystem.addItem(inventory, new InventoryItem("campfire", 1, "campfire.png", ItemType.BUILDING));
+        inventorySystem.addItem(inventory, new InventoryItem("chest", 1, "chest.png", ItemType.BUILDING));
 
         CraftingComponent crafting = new CraftingComponent();
 
@@ -58,12 +62,39 @@ public class Player extends Character {
         Map<String, Integer> chestRecipe = new HashMap<>();
         chestRecipe.put("wood", 8);
 
+        Map<String, Integer> woodenSwordRecipe = new HashMap<>();
+        woodenSwordRecipe.put("wood", 5);
+        woodenSwordRecipe.put("stone", 2);
+
+        Map<String, Integer> stonePickaxeRecipe = new HashMap<>();
+        stonePickaxeRecipe.put("wood", 3);
+        stonePickaxeRecipe.put("stone", 5);
+
+        Map<String, Integer> stoneAxeRecipe = new HashMap<>();
+        stoneAxeRecipe.put("wood", 3);
+        stoneAxeRecipe.put("stone", 5);
+
+        Map<String, Integer> stoneSwordRecipe = new HashMap<>();
+        stoneSwordRecipe.put("wood", 3);
+        stoneSwordRecipe.put("stone", 5);
+
+        Map<String, Integer> healingPotionRecipe = new HashMap<>();
+        healingPotionRecipe.put("apple", 1);
+        healingPotionRecipe.put("stone", 1);
+
+
         crafting.addRecipe("campfire", campfireRecipe);
         crafting.addRecipe("chest", chestRecipe);
 
-        this.addComponent(crafting);
+        crafting.addRecipe("wooden_sword", woodenSwordRecipe);
+        crafting.addRecipe("stone_sword", stoneSwordRecipe);
 
-        ObjectPlacementSystem placementSystem = new ObjectPlacementSystem();
+        crafting.addRecipe("stone_pickaxe", stonePickaxeRecipe);
+        crafting.addRecipe("stone_axe", stoneAxeRecipe);
+
+        crafting.addRecipe("healing_potion", healingPotionRecipe);
+
+        this.addComponent(crafting);
 
         Character campfire = new Character("Campfire");
         campfire.addComponent(new PlacementComponent(true, 1, 1));
@@ -72,9 +103,6 @@ public class Player extends Character {
         Character chest = new Character("Chest");
         chest.addComponent(new PlacementComponent(true, 1, 1));
         chest.addComponent(new HitboxComponent(32, 32));
-
-        placementSystem.placeObject(this, campfire, new Vector2(5, 5), false);
-        placementSystem.placeObject(this, chest, new Vector2(6, 5), false);
     }
 
     public Vector2 getWorldPosition() {
