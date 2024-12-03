@@ -1,6 +1,7 @@
 // GameScreen.java
 package project.project.screens;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -26,13 +27,20 @@ import project.project.systems.ObjectPlacementSystem;
 import project.project.systems.RenderSystem;
 import project.project.ui.HUD;
 import project.project.ui.InventoryUI;
+import project.project.ui.menu.WorldSelectionScreen;
 import project.project.utils.CoordinateUtils;
 import project.project.ui.InventoryUI;
+
+import java.io.*;
+import java.util.Scanner;
 
 import static project.project.Constants.MAP_HEIGHT;
 import static project.project.Constants.MAP_WIDTH;
 
 public class GameScreen implements Screen {
+    private final String worldName;
+    private final String username;
+
     private SpriteBatch batch;
     private OrthographicCamera camera; // World camera
     private IsometricRenderer renderer;
@@ -49,9 +57,10 @@ public class GameScreen implements Screen {
     private final MapLoader mapLoader;
 
 
-    public GameScreen(SpriteBatch batch) {
+    public GameScreen(SpriteBatch batch, String worldName, String username) {
         this.batch = batch;
-
+        this.worldName = worldName;
+        this.username = username;
 
         // Map generator and renderer
         MapGenerator mapGenerator = new MapGenerator(MAP_WIDTH, MAP_HEIGHT);
@@ -91,6 +100,9 @@ public class GameScreen implements Screen {
         inventoryUI.setVisible(false); // Start with the inventory hidden
         // Font for debug UI
         this.font = new BitmapFont();
+
+        // Initialize game-specific components using worldName and username
+        System.out.println("Game started for user: " + username + " in world: " + worldName);
     }
 
     @Override

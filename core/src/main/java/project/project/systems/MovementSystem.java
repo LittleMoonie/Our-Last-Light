@@ -10,24 +10,52 @@ import project.project.entities.Player;
 
 public class MovementSystem {
 
+    private Vector2 previousMovementVector = new Vector2(); // Track the previous movement
+
     public void update(float delta, Character character) {
-        // Récupérer les composants nécessaires
+        // Retrieve necessary components
         PositionComponent position = character.getComponent(PositionComponent.class);
         MovementComponent movement = character.getComponent(MovementComponent.class);
 
         if (position != null && movement != null) {
-            // Calculer le déplacement
+            // Calculate movement
             Vector2 movementVector = handleInput();
             if (!movementVector.isZero()) {
-                // Normaliser pour éviter un mouvement plus rapide en diagonale
+                // Normalize to prevent faster diagonal movement
                 movementVector.nor().scl(movement.speed * delta);
-                // Appliquer le mouvement
+
+                // Detect backward movement (negative y-axis after rotation)
+                if (character instanceof Player) {
+                    Player player = (Player) character;
+                    // Walking Backwards
+                    if (movementVector.y > 0 && previousMovementVector.y <= 0) {
+                        player.setTexture("back_walk.gif");
+                    }
+                    // Walking forward
+                    else if (movementVector.y < 0 && previousMovementVector.y >= 0) {
+                        player.setTexture("forward_walk.gif");
+                    }
+                    // Left and top left and bottom left walk
+                    else if (movementVector.x < 0 && previousMovementVector.x >= 0) {
+                        player.setTexture("left_walk.gif");
+                    }
+                    // Right and top right and bottom right walk
+                    else if (movementVector.x > 0 && previousMovementVector.x <= 0) {
+                        player.setTexture("right_walk.gif");
+                    }
+                }
+
+                // Apply movement
                 move(position, movementVector);
-                // Synchroniser la position du joueur
+
+                // Sync player's world position
                 if (character instanceof Player) {
                     syncWorldPosition(position, (Player) character);
                 }
             }
+
+            // Update the previous movement vector
+            previousMovementVector.set(movementVector);
         }
     }
 
@@ -76,4 +104,5 @@ public class MovementSystem {
     private void syncWorldPosition(PositionComponent position, Player player) {
         player.setWorldPosition(position.worldPos.x, position.worldPos.y);
     }
+
 }

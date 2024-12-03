@@ -36,7 +36,6 @@ public class Constants {
 
     // Player settings
     public static final float PLAYER_MOVE_INTERVAL = 0.2f; // Time between moves
-    public static final String PLAYER_TEXTURE = "player1.png";
 
     // MapGenerator settings
 //    public static final double MAP_SCALE = 5.0; // Scaling factor for noise

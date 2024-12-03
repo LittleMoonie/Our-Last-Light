@@ -210,4 +210,11 @@ public class Player extends Character {
         return inventory;
     }
 
+    public void setTexture(String texturePath) {
+        TextureComponent textureComponent = this.getComponent(TextureComponent.class);
+        if (textureComponent != null) {
+            textureComponent.setTexture(texturePath); // Assuming TextureComponent has this method
+        }
+    }
+
 }
