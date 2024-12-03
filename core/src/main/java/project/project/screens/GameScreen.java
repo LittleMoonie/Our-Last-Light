@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.*;
 import com.badlogic.gdx.graphics.g2d.*;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.*;
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -31,14 +32,32 @@ import project.project.rendering.IsometricRenderer;
 import project.project.systems.*;
 import project.project.ui.*;
 import project.project.utils.*;
+import project.project.map.MapGenerator;
+import project.project.entities.Player;
+import project.project.systems.MovementSystem;
+import project.project.systems.ObjectPlacementSystem;
+import project.project.systems.RenderSystem;
+import project.project.ui.HUD;
+import project.project.ui.InventoryUI;
+import project.project.ui.menu.WorldSelectionScreen;
+import project.project.utils.CoordinateUtils;
+import project.project.ui.InventoryUI;
 
 import java.util.*;
 
 import static project.project.Constants.*;
+import java.io.*;
+import java.util.Scanner;
+
+import static project.project.Constants.MAP_HEIGHT;
+import static project.project.Constants.MAP_WIDTH;
 
 public class GameScreen implements Screen {
+    private final String worldName;
+    private final String username;
+
     private SpriteBatch batch;
-    private OrthographicCamera camera;
+    private OrthographicCamera camera; // World camera
     private IsometricRenderer renderer;
     private Player player;
     private BitmapFont font;
@@ -62,10 +81,13 @@ public class GameScreen implements Screen {
     private List<Mob> deadMobs = new ArrayList<>();
 
 
-    public GameScreen(SpriteBatch batch) {
+    public GameScreen(SpriteBatch batch, String worldName, String username) {
         this.batch = batch;
         shapeRenderer = new ShapeRenderer(); // Initialisation de ShapeRenderer
         this.mobSpawnSystem = new MobSpawnSystem();
+        this.worldName = worldName;
+        this.username = username;
+
         // Map generator and renderer
         MapGenerator mapGenerator = new MapGenerator(MAP_WIDTH, MAP_HEIGHT);
         this.mapLoader = new MapLoader(mapGenerator);
@@ -86,7 +108,7 @@ public class GameScreen implements Screen {
 
         // HUD and systems
         this.hud = new HUD(batch, player);
-//        attackSystem = new AttackSystem(); // Initialisation de l'AttackSystem
+
         // Pass the render system to the placement system
         this.renderSystem = new RenderSystem(batch, camera);
         this.placementSystem = new ObjectPlacementSystem(renderSystem);
@@ -108,12 +130,15 @@ public class GameScreen implements Screen {
 
         Vector2 playerPosition = player.getWorldPosition();
         this.mobSpawnSystem.spawnMobs(playerPosition, 5);
+
+        // Initialize game-specific components using worldName and username
+        System.out.println("Game started for user: " + username + " in world: " + worldName);
     }
 
     @Override
     public void show() {
         stage = new Stage(new ScreenViewport());
-        Gdx.input.setInputProcessor(stage);
+        Gdx.input.setInputProcessor(stage); // Redirect input to stage
 
         // Initialize the inventory UI
         inventoryUI = new InventoryUI(stage, player, placementSystem);
@@ -166,8 +191,6 @@ public class GameScreen implements Screen {
         float extendedWidth = scaledViewportWidth + tileWidth * 2;
         float extendedHeight = scaledViewportHeight + tileHeight * 2;
 
-//        float extendedWidth = camera.viewportWidth * camera.zoom + Constants.TILE_WIDTH * 2;
-//        float extendedHeight = camera.viewportHeight * camera.zoom + Constants.TILE_HEIGHT * 2;
         Rectangle viewBounds = new Rectangle(
             camera.position.x - extendedWidth / 2,
             camera.position.y - extendedHeight / 2,

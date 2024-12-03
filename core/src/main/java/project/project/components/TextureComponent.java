@@ -3,6 +3,7 @@ package project.project.components;
 import com.badlogic.gdx.graphics.Texture;
 
 public class TextureComponent implements Component {
+    private String currentTexturePath;
     public Texture texture;
     public float width;
     public float height;
@@ -10,6 +11,7 @@ public class TextureComponent implements Component {
 
     public TextureComponent(String texturePath, float width, float height) {
         this.texture = new Texture(texturePath);
+        this.currentTexturePath = texturePath;
         this.filePath = texturePath;
         this.width = width;
         this.height = height;
@@ -28,5 +30,13 @@ public class TextureComponent implements Component {
 
     public void dispose() {
         texture.dispose();
+    }
+
+    public void setTexture(String texturePath) {
+        if (!texturePath.equals(currentTexturePath)) {
+            texture.dispose(); // Dispose of old texture
+            texture = new Texture(texturePath);
+            currentTexturePath = texturePath;
+        }
     }
 }

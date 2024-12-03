@@ -20,8 +20,6 @@ public class Player extends Character {
     // Listener to notify UI of inventory changes
     private Runnable inventoryUpdateListener;
 
-//    private AttackSystem attackSystem = new AttackSystem();
-
     public Player(Vector2 startingTilePos) {
         super("Player");
         this.position = new PositionComponent(startingTilePos);
@@ -223,4 +221,11 @@ public class Player extends Character {
     public Vector2 getPosition() {
         return position.worldPos;
     }
+    public void setTexture(String texturePath) {
+        TextureComponent textureComponent = this.getComponent(TextureComponent.class);
+        if (textureComponent != null) {
+            textureComponent.setTexture(texturePath); // Assuming TextureComponent has this method
+        }
+    }
+
 }
