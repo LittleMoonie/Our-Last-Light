@@ -65,11 +65,7 @@ public class GameScreen implements Screen {
     public GameScreen(SpriteBatch batch) {
         this.batch = batch;
         shapeRenderer = new ShapeRenderer(); // Initialisation de ShapeRenderer
-        mapGenerator = new MapGenerator(MAP_WIDTH, MAP_HEIGHT);
-        mobSpawnSystem = new MobSpawnSystem();
-        mapLoader = new MapLoader(mapGenerator);
-        renderer = new IsometricRenderer(mapGenerator, mapLoader);
-
+        this.mobSpawnSystem = new MobSpawnSystem();
         // Map generator and renderer
         MapGenerator mapGenerator = new MapGenerator(MAP_WIDTH, MAP_HEIGHT);
         this.mapLoader = new MapLoader(mapGenerator);
@@ -90,10 +86,6 @@ public class GameScreen implements Screen {
 
         // HUD and systems
         this.hud = new HUD(batch, player);
-
-        placementSystem = new ObjectPlacementSystem();
-        movementSystem = new MovementSystem();
-        renderSystem = new RenderSystem(batch, camera);
 //        attackSystem = new AttackSystem(); // Initialisation de l'AttackSystem
         // Pass the render system to the placement system
         this.renderSystem = new RenderSystem(batch, camera);
@@ -115,7 +107,7 @@ public class GameScreen implements Screen {
         this.font = new BitmapFont();
 
         Vector2 playerPosition = player.getWorldPosition();
-        mobSpawnSystem.spawnMobs(playerPosition, 5);
+        this.mobSpawnSystem.spawnMobs(playerPosition, 5);
     }
 
     @Override
@@ -174,8 +166,8 @@ public class GameScreen implements Screen {
         float extendedWidth = scaledViewportWidth + tileWidth * 2;
         float extendedHeight = scaledViewportHeight + tileHeight * 2;
 
-        float extendedWidth = camera.viewportWidth * camera.zoom + Constants.TILE_WIDTH * 2;
-        float extendedHeight = camera.viewportHeight * camera.zoom + Constants.TILE_HEIGHT * 2;
+//        float extendedWidth = camera.viewportWidth * camera.zoom + Constants.TILE_WIDTH * 2;
+//        float extendedHeight = camera.viewportHeight * camera.zoom + Constants.TILE_HEIGHT * 2;
         Rectangle viewBounds = new Rectangle(
             camera.position.x - extendedWidth / 2,
             camera.position.y - extendedHeight / 2,
@@ -223,15 +215,15 @@ public class GameScreen implements Screen {
                 }
 
                 AttackCooldownComponent attackCooldown = mob.getComponent(AttackCooldownComponent.class);
-                if (attackCooldown != null && attackCooldown.cooldownTimer <= 0) {
-                    // Afficher le pistolet
-                    font.getData().setScale(2f);
-                    font.draw(batch, "piou piou",
-                        mob.getWorldPosition().x,
-                        mob.getWorldPosition().y + mob.getHitboxRectangle().height + 20
-                    );
-                    font.getData().setScale(1f); // Rétablir la taille de police par défaut
-                }
+//                if (attackCooldown != null && attackCooldown.cooldownTimer <= 0) {
+//                    // Afficher le pistolet
+//                    font.getData().setScale(2f);
+//                    font.draw(batch, "piou piou",
+//                        mob.getWorldPosition().x,
+//                        mob.getWorldPosition().y + mob.getHitboxRectangle().height + 20
+//                    );
+//                    font.getData().setScale(1f); // Rétablir la taille de police par défaut
+//                }
             }
         }
         // afficher les mobs de la liste mobsInView
@@ -244,7 +236,6 @@ public class GameScreen implements Screen {
 
         // Ajouter la vérification et la gestion des attaques des mobs
         checkMobAttacksOnPlayer(delta);
-        renderSystem.update(delta);
         batch.end();
 
         renderCollisions(player, mobsInView);
@@ -256,11 +247,101 @@ public class GameScreen implements Screen {
         stage.act(delta);
         stage.draw();
     }
+    private boolean isInAttackRange(Mob mob, Player player) {
+        PositionComponent mobPosition = mob.getComponent(PositionComponent.class);
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+        AttackComponent mobAttack = mob.getComponent(AttackComponent.class);
+
+        if (mobPosition != null && playerPosition != null && mobAttack != null) {
+            float distance = mobPosition.worldPos.dst(playerPosition.worldPos);
+            return distance <= mobAttack.getAttackRange();
+        }
+        return false;
+    }
+
+    public void applyDamageToPlayer(Player player, Mob mob) {
+        // Récupérer le composant de santé du mob
+        HealthComponent playerHealth = player.getComponent(HealthComponent.class);
+
+        // Vérifier si le mob a un composant de santé
+        if (playerHealth != null) {
+            int damage = mob.getComponent(AttackComponent.class).getAttackDamage(); // Récupérer les dégâts du joueur
+
+            playerHealth.takeDamage(damage);
+
+            // Afficher un message dans la console pour debug
+            System.out.println("Le mob " + mob.getId() + " a fait " + damage + " dégâts au player. Vie restante : " + playerHealth.currentHealth);
+
+            // Si la santé du mob est inférieure ou égale à 0, le mob est tué
+            if (playerHealth.currentHealth <= 0) {
+                System.out.println( player.getName() + " est mort !");
+            }
+        }
+    }
+
+
+    private void checkMobAttacksOnPlayer(float delta) {
+        List<Mob> mobs = mobSpawnSystem.getMobs();
+        HealthComponent playerHealth = player.getComponent(HealthComponent.class);
+        PositionComponent playerPosition = player.getComponent(PositionComponent.class);
+
+        if (playerHealth == null || playerPosition == null) {
+            return;
+        }
+
+        for (Mob mob : mobs) {
+            // Mettre à jour l'effet d'attaque pour chaque mob
+            mob.updateAttackEffect(delta);
+
+            // Vérifier si le mob peut attaquer
+            AttackComponent mobAttack = mob.getComponent(AttackComponent.class);
+            AttackCooldownComponent attackCooldown = mob.getComponent(AttackCooldownComponent.class);
+
+            if (mobAttack == null || attackCooldown == null) {
+                continue;
+            }
+
+            // Réduire le temps de cooldown
+            attackCooldown.cooldownTimer -= delta;
+
+            // Calculer la distance entre le mob et le joueur
+            float distance = mob.getPosition().dst(playerPosition.worldPos);
+
+            // Vérifier si le joueur est dans la portée d'attaque et si le cooldown est écoulé
+            if (distance <= mobAttack.getAttackRange() && attackCooldown.cooldownTimer <= 0) {
+                // Attaquer le joueur
+                int damage = mobAttack.getAttackDamage();
+                playerHealth.takeDamage(damage);
+
+                // Déclencher l'effet d'attaque du mob
+                mob.startAttack();
+
+                // Réinitialiser le cooldown
+                attackCooldown.cooldownTimer = attackCooldown.cooldownDuration;
+
+                System.out.println("Mob " + mob.getId() + " attaque le joueur et fait " + damage + " dégâts. Vie restante du joueur : " + playerHealth.currentHealth);
+
+                // Vérifier si le joueur est mort
+                if (playerHealth.currentHealth <= 0) {
+                    System.out.println("Le joueur est mort !");
+                    //
+                }
+            }
+        }
+    }
 
     private void smoothCameraFollow() {
         Vector2 playerWorldPosition = player.getWorldPosition();
         camera.position.set(playerWorldPosition.x, playerWorldPosition.y, 0);
         camera.update();
+    }
+    private boolean isWithinCameraView(Vector2 position, OrthographicCamera camera) {
+        float startX = camera.position.x - (camera.viewportWidth * camera.zoom) / 2;
+        float endX = camera.position.x + (camera.viewportWidth * camera.zoom) / 2;
+        float startY = camera.position.y - (camera.viewportHeight * camera.zoom) / 2;
+        float endY = camera.position.y + (camera.viewportHeight * camera.zoom) / 2;
+
+        return position.x >= startX && position.x <= endX && position.y >= startY && position.y <= endY;
     }
 
     private void handleInput(float delta) {

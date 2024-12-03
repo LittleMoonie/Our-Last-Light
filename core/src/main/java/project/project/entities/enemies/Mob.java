@@ -37,7 +37,7 @@ public class Mob extends Character {
 
         addComponent(new AttackCooldownComponent(1.0f)); // Cooldown de 1 seconde entre chaque attaque
         // Charger la texture
-        mobTexture = new Texture("player2.png");
+        mobTexture = new Texture("mob.png");
 
         // Créer une hitbox autour du mob
         hitboxRectangle = new Rectangle(
