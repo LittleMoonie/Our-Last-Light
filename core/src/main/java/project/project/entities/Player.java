@@ -25,8 +25,8 @@ public class Player extends Character {
         this.position = new PositionComponent(startingTilePos);
         addComponent(this.position);
         addComponent(new TextureComponent("player1.png", 50, 70));
-        addComponent(new HealthComponent(75));
-        addComponent(new MovementComponent(2));
+        addComponent(new HealthComponent(100));
+        addComponent(new MovementComponent(1.5f));
 
         addComponent(new AttackComponent(10, 100)); // Ajout de l'AttackComponent
 

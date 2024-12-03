@@ -28,11 +28,11 @@ public class Mob extends Character {
 
     public Mob(Vector2 mobPosition) {
         super("Mob");
-        addComponent(new HealthComponent(50));
+        addComponent(new HealthComponent(300));
         this.position = mobPosition;
         this.targetPosition = null; // Pas de cible initialement
-        addComponent(new AttackComponent(1, 50)); // Dégâts et vitesse d'attaque
-        addComponent(new MovementComponent(80)); // Vitesse de mouvement
+        addComponent(new AttackComponent(5, 50)); // Dégâts et vitesse d'attaque
+        addComponent(new MovementComponent(101)); // Vitesse de mouvement
         addComponent(new HitboxComponent(50, 50));
 
         addComponent(new AttackCooldownComponent(1.0f)); // Cooldown de 1 seconde entre chaque attaque

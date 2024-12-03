@@ -48,6 +48,7 @@ import java.util.*;
 import static project.project.Constants.*;
 import java.io.*;
 import java.util.Scanner;
+import java.util.function.Consumer;
 
 import static project.project.Constants.MAP_HEIGHT;
 import static project.project.Constants.MAP_WIDTH;
@@ -80,6 +81,8 @@ public class GameScreen implements Screen {
 
     private List<Mob> deadMobs = new ArrayList<>();
 
+    private boolean isGameOver = false;
+    private BitmapFont gameOverFont;
 
     public GameScreen(SpriteBatch batch, String worldName, String username) {
         this.batch = batch;
@@ -117,6 +120,10 @@ public class GameScreen implements Screen {
         // Add the player to the render system
         this.movementSystem = new MovementSystem();
         renderSystem.addEntity(player);
+
+        // Dans le constructeur, après l'initialisation de font
+        this.gameOverFont = new BitmapFont();
+        this.gameOverFont.getData().setScale(3f); // Rendre le texte plus grand
 
         // Initialize stage
         this.stage = new Stage(new ScreenViewport());
@@ -249,8 +256,6 @@ public class GameScreen implements Screen {
 //                }
             }
         }
-        // afficher les mobs de la liste mobsInView
-//        System.out.println("Mobs in view: " + mobsInView.size());
 
         renderSystem.update(delta, visibleEntities);
 
@@ -269,6 +274,52 @@ public class GameScreen implements Screen {
 
         stage.act(delta);
         stage.draw();
+
+        // Supprimer les mobs morts de mobSpawnSystem
+        mobSpawnSystem.getMobs().removeAll(deadMobs);
+        deadMobs.clear();  // Réinitialiser la liste des morts après chaque mise à jour
+
+        // Afficher GAME OVER si le joueur est mort
+//        if (isGameOver) {
+//            batch.begin();
+//            // Dessiner GAME OVER au centre de l'écran
+//            String gameOverText = "GAME OVER";
+//            float textWidth = gameOverFont.getRegion().getRegionWidth() * gameOverFont.getData().scaleX;
+//            float textHeight = gameOverFont.getCapHeight();
+//
+//            gameOverFont.setColor(Color.RED);
+//            gameOverFont.draw(batch, gameOverText,
+//                Gdx.graphics.getWidth() / 2f - textWidth / 2,
+//                Gdx.graphics.getHeight() / 2f + textHeight / 2);
+//            batch.end();
+//
+//            // Arrêter les mises à jour du jeu
+//            Gdx.input.setInputProcessor(null);
+//        }
+
+        // Afficher GAME OVER si le joueur est mort
+        if (isGameOver) {
+            batch.setProjectionMatrix(camera.combined);  // Utiliser la matrice de projection de la caméra
+            batch.begin();
+
+            // Dessiner GAME OVER au centre de la caméra
+            String gameOverText = "GAME OVER";
+
+            // Calculer la largeur et la hauteur du texte
+            float textWidth = gameOverFont.getRegion().getRegionWidth() * gameOverFont.getData().scaleX;
+            float textHeight = gameOverFont.getCapHeight();
+
+            gameOverFont.setColor(Color.RED);
+            gameOverFont.draw(batch, gameOverText,
+                camera.position.x - textWidth / 2,  // Centrer horizontalement par rapport à la caméra
+                camera.position.y + textHeight / 2  // Centrer verticalement par rapport à la caméra
+            );
+            batch.end();
+
+            // Arrêter les mises à jour du jeu
+            Gdx.input.setInputProcessor(null);
+        }
+
     }
     private boolean isInAttackRange(Mob mob, Player player) {
         PositionComponent mobPosition = mob.getComponent(PositionComponent.class);
@@ -298,6 +349,7 @@ public class GameScreen implements Screen {
             // Si la santé du mob est inférieure ou égale à 0, le mob est tué
             if (playerHealth.currentHealth <= 0) {
                 System.out.println( player.getName() + " est mort !");
+                isGameOver = true;
             }
         }
     }
@@ -347,7 +399,8 @@ public class GameScreen implements Screen {
                 // Vérifier si le joueur est mort
                 if (playerHealth.currentHealth <= 0) {
                     System.out.println("Le joueur est mort !");
-                    //
+
+                    isGameOver = true;
                 }
             }
         }
@@ -566,6 +619,7 @@ public class GameScreen implements Screen {
         stage.dispose(); // Dispose the stage
         mapLoader.dispose();
         shapeRenderer.dispose(); // Dispose de ShapeRenderer
+        gameOverFont.dispose(); // Ajouter cette ligne
 //        attackSystem.dispose();
     }
 
